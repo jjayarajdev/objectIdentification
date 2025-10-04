@@ -57,6 +57,7 @@ class ImageResult(BaseModel):
     token_usage: Optional[TokenUsage] = None
     cost_estimate: Optional[CostEstimate] = None
     processing_time: Optional[float] = None
+    room_analysis: Optional[Dict[str, Any]] = None  # Room intelligence analysis
     error: Optional[str] = None
 
 class BatchResult(BaseModel):

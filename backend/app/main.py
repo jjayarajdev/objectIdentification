@@ -4,12 +4,12 @@ from fastapi.staticfiles import StaticFiles
 import os
 
 from app.config import settings
-from app.routers import upload, detection, exif, export, health
+from app.routers import upload, detection, exif, export, health, room_analysis
 
 # Create FastAPI app
 app = FastAPI(
-    title="Object Detection API",
-    description="Image object detection with GPT-4o Vision, EXIF metadata extraction, and cost estimation",
+    title="Room Intelligence & Object Detection API",
+    description="Advanced room analysis with object detection, cost estimation, comprehensive reporting, and Word document generation",
     version="1.0.0"
 )
 
@@ -26,12 +26,17 @@ app.add_middleware(
 if os.path.exists(settings.upload_folder):
     app.mount("/uploads", StaticFiles(directory=settings.upload_folder), name="uploads")
 
+# Mount static files for serving reports
+if os.path.exists(settings.results_folder):
+    app.mount("/reports", StaticFiles(directory=settings.results_folder), name="reports")
+
 # Include routers
 app.include_router(health.router, tags=["Health"])
 app.include_router(upload.router, prefix="/api/v1", tags=["Upload"])
 app.include_router(detection.router, prefix="/api/v1", tags=["Detection"])
 app.include_router(exif.router, prefix="/api/v1", tags=["EXIF"])
 app.include_router(export.router, prefix="/api/v1", tags=["Export"])
+app.include_router(room_analysis.router, prefix="/api/room-analysis", tags=["Room Intelligence"])
 
 @app.on_event("startup")
 async def startup_event():

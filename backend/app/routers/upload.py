@@ -80,12 +80,18 @@ async def upload_single_image(
             try:
                 from app.services.gpt_vision import GPTVisionService
                 from app.services.exif_extractor import ExifExtractor
+                from app.services.scene_analyzer import SceneAnalyzer
 
                 gpt_vision = GPTVisionService()
                 exif_extractor = ExifExtractor()
+                scene_analyzer = SceneAnalyzer()
 
-                print(f"Starting object detection for {saved_path}")
-                # Perform object detection
+                print(f"Starting comprehensive analysis for {saved_path}")
+
+                # Perform adaptive scene analysis
+                scene_analysis = await scene_analyzer.analyze_scene(saved_path)
+
+                # Also perform traditional object detection for bounding boxes
                 detected_objects, analysis, token_usage, processing_time = await gpt_vision.detect_objects(saved_path)
                 print(f"Detected {len(detected_objects)} objects")
 
@@ -103,6 +109,9 @@ async def upload_single_image(
                 image_result.token_usage = token_usage
                 image_result.cost_estimate = cost_estimate
                 image_result.processing_time = processing_time
+
+                # Add scene analysis data
+                image_result.room_analysis = scene_analysis  # Keep field name for compatibility
 
                 # Log the objects being sent
                 print(f"Sending {len(detected_objects)} objects to frontend:")
@@ -216,15 +225,20 @@ async def upload_batch_images(
         if process_immediately and results:
             from app.services.gpt_vision import GPTVisionService
             from app.services.exif_extractor import ExifExtractor
+            from app.services.scene_analyzer import SceneAnalyzer
 
             gpt_vision = GPTVisionService()
             exif_extractor = ExifExtractor()
+            scene_analyzer = SceneAnalyzer()
 
             # Process each image in the batch
             for idx, image_result in enumerate(results):
                 try:
                     saved_path = image_result._saved_path
                     print(f"Batch processing image {idx+1}/{len(results)}: {saved_path}")
+
+                    # Perform adaptive scene analysis
+                    scene_analysis = await scene_analyzer.analyze_scene(saved_path)
 
                     # Perform object detection
                     detected_objects, analysis, token_usage, processing_time = await gpt_vision.detect_objects(saved_path)
@@ -243,6 +257,7 @@ async def upload_batch_images(
                     image_result.token_usage = token_usage
                     image_result.cost_estimate = cost_estimate
                     image_result.processing_time = processing_time
+                    image_result.room_analysis = scene_analysis  # Keep field name for compatibility
 
                     # Remove temporary attribute
                     delattr(image_result, '_saved_path')

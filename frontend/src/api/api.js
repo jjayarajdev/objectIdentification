@@ -82,4 +82,53 @@ export const exportBatchResults = async (batchId, format = 'json') => {
   });
 };
 
+// Room Intelligence Analysis
+export const analyzeRoom = async (file, generateReport = true) => {
+  const formData = new FormData();
+  formData.append('file', file);
+  formData.append('generate_report', generateReport);
+
+  return api.post('/room/analyze-room', formData, {
+    headers: {
+      'Content-Type': 'multipart/form-data',
+    },
+  });
+};
+
+export const analyzeBatchRooms = async (files, generateReports = true) => {
+  const formData = new FormData();
+  files.forEach(file => {
+    formData.append('files', file);
+  });
+  formData.append('generate_reports', generateReports);
+
+  return api.post('/room/analyze-batch', formData, {
+    headers: {
+      'Content-Type': 'multipart/form-data',
+    },
+  });
+};
+
+export const downloadRoomReport = async (reportFilename) => {
+  const response = await api.get(`/room/download-report/${reportFilename}`, {
+    responseType: 'blob',
+  });
+
+  // Create download link
+  const url = window.URL.createObjectURL(new Blob([response.data]));
+  const link = document.createElement('a');
+  link.href = url;
+  link.setAttribute('download', reportFilename);
+  document.body.appendChild(link);
+  link.click();
+  link.remove();
+  window.URL.revokeObjectURL(url);
+
+  return response;
+};
+
+export const getCostDatabase = async () => {
+  return api.get('/room/cost-database');
+};
+
 export default api;

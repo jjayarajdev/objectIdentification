@@ -4,8 +4,9 @@ import GalleryViewer from './components/GalleryViewer';
 import ExifMetadata from './components/ExifMetadata';
 import CostTracker from './components/CostTracker';
 import ObjectsTable from './components/ObjectsTable';
-import { Camera, Download, FileJson, FileText, FileSpreadsheet, Loader, ChevronRight, ChevronLeft, Info, DollarSign } from 'lucide-react';
-import { uploadSingleImage, uploadBatchImages, getImageExif, exportResults } from './api/api';
+import SceneAnalysis from './components/SceneAnalysis';
+import { Camera, Download, FileJson, FileText, FileSpreadsheet, Loader, ChevronRight, ChevronLeft, Info } from 'lucide-react';
+import { uploadSingleImage, uploadBatchImages, getImageExif, exportResults, downloadRoomReport } from './api/api';
 
 function App() {
   const [images, setImages] = useState([]);
@@ -37,7 +38,7 @@ function App() {
   const handleImageUpload = async (files) => {
     setLoading(true);
     setError(null);
-    setProcessingStatus('Uploading images...');
+    setProcessingStatus('Analyzing images...');
 
     try {
       let response;
@@ -61,6 +62,7 @@ function App() {
             token_usage: img.token_usage,
             cost_estimate: img.cost_estimate,
             processing_time: img.processing_time,
+            room_analysis: img.room_analysis, // Include room analysis
           }));
 
           setImages((prev) => [...prev, ...processedImages]);
@@ -85,6 +87,7 @@ function App() {
             token_usage: img.token_usage,
             cost_estimate: img.cost_estimate,
             processing_time: img.processing_time,
+            room_analysis: img.room_analysis, // Include room analysis
           }));
 
           setImages((prev) => [...prev, ...processedImages]);
@@ -92,7 +95,7 @@ function App() {
         }
       }
 
-      setProcessingStatus('Upload complete!');
+      setProcessingStatus('Analysis complete!');
     } catch (err) {
       console.error('Upload error:', err);
       setError(err.message || 'Failed to upload images');
@@ -138,6 +141,16 @@ function App() {
     }
   };
 
+  const handleDownloadReport = async (reportUrl) => {
+    try {
+      const reportFilename = reportUrl.split('/').pop();
+      await downloadRoomReport(reportFilename);
+    } catch (err) {
+      console.error('Download error:', err);
+      setError('Failed to download report');
+    }
+  };
+
   const handleClearAll = () => {
     setImages([]);
     setSelectedImageIndex(0);
@@ -155,10 +168,10 @@ function App() {
               <Camera className="w-8 h-8 text-blue-600" />
               <div>
                 <h1 className="text-2xl font-bold text-gray-900">
-                  Object Detection & EXIF Analysis
+                  Property & Scene Analysis System
                 </h1>
                 <p className="text-sm text-gray-500">
-                  Powered by GPT-4o Vision
+                  AI-Powered Surveyor Intelligence Platform
                 </p>
               </div>
             </div>
@@ -218,7 +231,7 @@ function App() {
           </div>
         )}
 
-        {/* Upload Area */}
+        {/* Upload Area or Image Display */}
         {images.length === 0 ? (
           <div className="mb-8">
             <ImageUpload
@@ -287,50 +300,64 @@ function App() {
                   />
                 </div>
 
-                {/* Detailed Objects Table */}
-                <ObjectsTable
-                  objects={images[selectedImageIndex]?.objects}
-                  imageAnalysis={images[selectedImageIndex]?.analysis}
-                  loading={loading}
-                />
+                {/* Scene Analysis (if available) or Objects Table */}
+                {images[selectedImageIndex]?.room_analysis ? (
+                  <SceneAnalysis
+                    analysis={images[selectedImageIndex].room_analysis}
+                    loading={loading}
+                    onDownloadReport={handleDownloadReport}
+                  />
+                ) : (
+                  <ObjectsTable
+                    objects={images[selectedImageIndex]?.objects}
+                    imageAnalysis={images[selectedImageIndex]?.analysis}
+                    loading={loading}
+                  />
+                )}
 
                 {/* Export Options */}
                 <div className="bg-white rounded-lg shadow-md p-4 mt-6">
                   <h3 className="text-lg font-semibold text-gray-800 mb-4">Export Options</h3>
-              <div className="flex flex-wrap gap-3">
-                <button
-                  onClick={() => handleExport('json')}
-                  className="flex items-center gap-2 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
-                >
-                  <FileJson className="w-4 h-4" />
-                  Export as JSON
-                </button>
-                <button
-                  onClick={() => handleExport('yolo')}
-                  className="flex items-center gap-2 px-4 py-2 bg-purple-600 text-white rounded-lg hover:bg-purple-700 transition-colors"
-                >
-                  <FileText className="w-4 h-4" />
-                  Export as YOLO
-                </button>
-                <button
-                  onClick={() => handleExport('coco')}
-                  className="flex items-center gap-2 px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors"
-                >
-                  <FileText className="w-4 h-4" />
-                  Export as COCO
-                </button>
-                <button
-                  onClick={() => handleExport('csv')}
-                  className="flex items-center gap-2 px-4 py-2 bg-orange-600 text-white rounded-lg hover:bg-orange-700 transition-colors"
-                >
-                  <FileSpreadsheet className="w-4 h-4" />
-                  Export as CSV
-                </button>
-              </div>
-            </div>
+                  <div className="flex flex-wrap gap-3">
+                    <button
+                      onClick={() => handleExport('json')}
+                      className="flex items-center gap-2 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
+                    >
+                      <FileJson className="w-4 h-4" />
+                      Export as JSON
+                    </button>
+                    <button
+                      onClick={() => handleExport('yolo')}
+                      className="flex items-center gap-2 px-4 py-2 bg-purple-600 text-white rounded-lg hover:bg-purple-700 transition-colors"
+                    >
+                      <FileText className="w-4 h-4" />
+                      Export as YOLO
+                    </button>
+                    <button
+                      onClick={() => handleExport('coco')}
+                      className="flex items-center gap-2 px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors"
+                    >
+                      <FileText className="w-4 h-4" />
+                      Export as COCO
+                    </button>
+                    <button
+                      onClick={() => handleExport('csv')}
+                      className="flex items-center gap-2 px-4 py-2 bg-orange-600 text-white rounded-lg hover:bg-orange-700 transition-colors"
+                    >
+                      <FileSpreadsheet className="w-4 h-4" />
+                      Export as CSV
+                    </button>
+                  </div>
+                </div>
 
                 {/* Add More Images Button */}
                 <div className="mt-6 text-center">
+                  <div className="hidden">
+                    <ImageUpload
+                      onUpload={handleImageUpload}
+                      multiple={uploadMode === 'batch'}
+                    />
+                  </div>
                   <button
                     onClick={() => {
                       document.querySelector('input[type="file"]')?.click();
@@ -344,16 +371,6 @@ function App() {
               </div>
             </div>
           </>
-        )}
-
-        {/* Hidden upload input for adding more images */}
-        {images.length > 0 && (
-          <div className="hidden">
-            <ImageUpload
-              onUpload={handleImageUpload}
-              multiple={uploadMode === 'batch'}
-            />
-          </div>
         )}
       </main>
     </div>
