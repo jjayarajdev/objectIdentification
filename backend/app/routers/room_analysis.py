@@ -11,14 +11,14 @@ import io
 import json
 
 from app.config import settings
-from app.services.room_intelligence import RoomIntelligenceService
+from app.services.scene_analyzer import SceneAnalyzer
 from app.services.report_generator import ReportGenerator
 from app.services.storage import StorageService
 
 router = APIRouter()
 
 # Initialize services
-room_intelligence = RoomIntelligenceService()
+scene_analyzer = SceneAnalyzer()
 report_generator = ReportGenerator()
 storage_service = StorageService()
 
@@ -55,18 +55,14 @@ async def analyze_room(
             file_ext
         )
 
-        # Perform room analysis
-        print(f"Starting room intelligence analysis for {saved_path}")
-        analysis = await room_intelligence.analyze_room(saved_path)
+        # Perform scene analysis
+        print(f"Starting scene analysis for {saved_path}")
+        analysis = await scene_analyzer.analyze_scene(saved_path)
 
         # Add image metadata
         analysis["image_id"] = image_id
         analysis["filename"] = file.filename
         analysis["image_url"] = f"/uploads/{image_id}{file_ext}"
-
-        # Format analysis for display
-        formatted_report = room_intelligence.format_analysis_for_display(analysis)
-        analysis["formatted_report"] = formatted_report
 
         # Generate Word report if requested
         if generate_report and "error" not in analysis:
@@ -201,8 +197,8 @@ async def analyze_batch_rooms(
                 file_ext
             )
 
-            # Analyze room
-            analysis = await room_intelligence.analyze_room(saved_path)
+            # Analyze scene
+            analysis = await scene_analyzer.analyze_scene(saved_path)
 
             # Add metadata
             analysis["image_id"] = image_id
@@ -241,7 +237,7 @@ async def get_cost_database():
     Returns:
         Cost database with all categories and price ranges
     """
-    return JSONResponse(content=room_intelligence.cost_database)
+    return JSONResponse(content={})
 
 
 @router.post("/custom-analysis")

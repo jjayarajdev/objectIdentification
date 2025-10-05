@@ -33,6 +33,16 @@ class SceneAnalyzer:
         """
         import re
 
+        # If no data or empty list, return a default entry
+        if not simplified_data or len(simplified_data) == 0:
+            return [
+                {
+                    "identifier": "Scene Contents",
+                    "details": "No specific items detected - manual entry required",
+                    "estimated_cost": "—"
+                }
+            ]
+
         enhanced_data = []
         for item in simplified_data:
             enhanced_item = {
@@ -104,7 +114,7 @@ class SceneAnalyzer:
         base64_image = self.encode_image(image_path)
 
         # Create adaptive analysis prompt
-        prompt = """You are an expert surveyor and property analyst. Analyze this image comprehensively.
+        prompt = """You are an expert surveyor and property analyst. Analyze this image with EXTREME DETAIL and comprehensiveness.
 
 FIRST, determine the SCENE TYPE:
 - indoor_office
@@ -118,7 +128,7 @@ FIRST, determine the SCENE TYPE:
 - parking_area
 - other
 
-Then provide a DETAILED ANALYSIS appropriate for the scene type. Include ONLY relevant categories:
+Then provide an EXTREMELY DETAILED ANALYSIS. Be thorough and specific:
 
 FOR ALL SCENES, always include:
 1. **scene_overview**: Brief description of what the image shows
@@ -164,18 +174,28 @@ FOR INFRASTRUCTURE:
 - maintenance_needs: Repairs required
 - utilities_present: Power lines, pipes, cables
 
+CRITICAL INSTRUCTIONS FOR DETAILED ANALYSIS:
+1. Count EVERY visible object - be exhaustive, miss nothing
+2. Describe positions precisely (e.g., "center", "bottom-right", "emerging from tunnel")
+3. Note colors, materials, conditions, quantities for everything
+4. Identify ALL infrastructure elements (cables, pipes, fixtures, signs)
+5. Describe spatial relationships between objects
+6. Note wear, damage, maintenance needs
+7. Identify safety and compliance features
+8. Be specific about quantities - count exact numbers when possible
+
 Return a JSON with this structure:
 {
   "scene_type": "type from list above",
-  "scene_overview": "comprehensive paragraph description",
+  "scene_overview": "DETAILED 2-3 paragraph description covering all major elements, their relationships, condition, and purpose. Include architectural features, traffic flow, safety measures, and environmental context",
   "simplified_data": [
     {
-      "identifier": "Category like People/Temperature/Furniture/Lighting/etc",
-      "details": "Concise description - for People: '9 total', for Temperature: '21-24°C (Central HVAC)', for Furniture: 'Couch, chair, coffee table, console', etc",
-      "estimated_cost": "Cost range like '₹80K - ₹1.4L' or '—' if not applicable"
+      "identifier": "Category (People/Vehicles/Traffic Control/Signage/Building Elements/Plants/Infrastructure/etc)",
+      "details": "SPECIFIC description with exact counts, colors, materials, positions. Example: '10 orange traffic cones, lined along driveway center and extending into tunnel'",
+      "estimated_cost": "Cost range like '₹500-1000 each' or '—' if not applicable"
     }
   ],
-  "narrative_report": "FULL DETAILED NARRATIVE REPORT in markdown format with emoji headers like:\n🧍 **Number of People**: detailed description\n🌡️ **Temperature**: detailed analysis\n🪑 **Furniture**: comprehensive list\netc. This should be the complete analysis suitable for Word document export",
+  "narrative_report": "COMPREHENSIVE NARRATIVE REPORT in markdown format. Must be 500+ words with these sections:\n\n📍 **Scene Overview**\nDetailed 2-3 paragraph description of the entire scene, its purpose, condition, and context.\n\n🧍 **People & Activity**\nDetailed count, descriptions, activities, positions of all people visible.\n\n🚗 **Vehicles & Transportation**\nAll vehicles present, their type, color, position, condition.\n\n🚧 **Traffic Control & Safety**\nAll safety equipment, barriers, cones, signs, their arrangement and purpose.\n\n🏗️ **Structural Elements**\nWalls, tunnels, gates, doors, architectural features, materials, conditions.\n\n🌿 **Landscaping & Environment**\nPlants, trees, environmental features, their placement and condition.\n\n⚡ **Infrastructure & Utilities**\nCables, pipes, lighting, electrical systems, drainage, other utilities.\n\n📋 **Signage & Markings**\nAll signs, markings, labels, their content and positioning.\n\n🛤️ **Surfaces & Pavements**\nGround conditions, materials, wear patterns, maintenance needs.\n\n🔧 **Maintenance Observations**\nCracks, patches, wear, needed repairs, general upkeep status.\n\n✅ **Key Observations & Recommendations**\nBullet points of most important findings and any recommendations.",
   "analysis_data": [
     {
       "category": "category name",
@@ -192,8 +212,14 @@ Return a JSON with this structure:
     }
   ],
   "key_observations": [
-    "important observation 1",
-    "important observation 2"
+    "Traffic cones play central role in path guidance for vehicles and pedestrians",
+    "Multiple entry/exit points: one main vehicle tunnel and two smaller side doors",
+    "Mixed-use environment: both vehicular and pedestrian flow through same space",
+    "Architectural design is functional and minimal with grey walls and yellow interior accents",
+    "Overhead cables indicate external wiring, likely temporary or for lighting/security",
+    "Palm plants add minimal but deliberate greenery to concrete-heavy setting",
+    "Visible wear and patching on driveway surface indicates regular heavy use",
+    "Security features include gate numbering system and controlled access points"
   ],
   "estimated_property_value": {
     "min": number or null,
@@ -202,21 +228,23 @@ Return a JSON with this structure:
   }
 }
 
-IMPORTANT for simplified_data:
-- Create SEPARATE rows for each distinct item type
-- ALWAYS include counts in details (e.g., "3 cones, orange plastic" or "5 chairs, wooden")
-- Keep category names generic: "Furniture", "Lighting", "Safety Equipment", "Vehicles", etc.
-- Keep details concise but ALWAYS include quantity if more than 1
-- Use "—" for estimated_cost when not applicable (like for People, Temperature)
-- Format costs as "₹XXK - ₹XXL" or "₹XX - ₹XX per unit/each"
-- Example rows:
-  {"identifier": "People", "details": "9 total", "estimated_cost": "—"}
-  {"identifier": "Temperature", "details": "21-24°C (Central HVAC)", "estimated_cost": "—"}
-  {"identifier": "Traffic Cones", "details": "5 cones, orange plastic", "estimated_cost": "₹500 - ₹1,000 each"}
-  {"identifier": "Furniture", "details": "L-shaped couch, 5-seater", "estimated_cost": "₹55K - ₹85K"}
-  {"identifier": "Furniture", "details": "2 lounge chairs, leather", "estimated_cost": "₹12K - ₹25K each"}
-  {"identifier": "Vehicles", "details": "3 sedans, parked", "estimated_cost": "—"}
-  {"identifier": "Safety Equipment", "details": "10 barriers, metal", "estimated_cost": "₹2K - ₹5K each"}
+CRITICAL for simplified_data - BE EXHAUSTIVE:
+- List EVERY distinct object/element visible - aim for 15-30+ rows for complex scenes
+- Include exact counts, positions, colors, materials, conditions
+- Categories to always check: People, Vehicles, Traffic Control, Signage, Structural Elements, Infrastructure, Plants/Landscaping, Surfaces/Pavements, Lighting, Safety Equipment, Doors/Windows, Utilities, Wall Features
+- Format examples with position details:
+  {"identifier": "People", "details": "3 pedestrians (2 women, 1 man) walking out of tunnel towards camera, center position", "estimated_cost": "—"}
+  {"identifier": "Vehicle", "details": "1 silver sedan car, parked near right edge, partially in frame", "estimated_cost": "—"}
+  {"identifier": "Traffic Control", "details": "10+ orange traffic cones lined along driveway center, extending into tunnel", "estimated_cost": "₹300-500 each"}
+  {"identifier": "Signage", "details": "'Gate 3' dark rectangular sign on right wall near tunnel entrance", "estimated_cost": "₹5K-10K"}
+  {"identifier": "Building Entry", "details": "Large rectangular tunnel/driveway opening, center of image, for parking/service entry", "estimated_cost": "—"}
+  {"identifier": "Walls", "details": "Plain grey concrete walls on both sides, framing the tunnel entrance", "estimated_cost": "—"}
+  {"identifier": "Overhead Infrastructure", "details": "Electrical cables running horizontally above gate, external wiring visible", "estimated_cost": "₹10K-20K"}
+  {"identifier": "Plants", "details": "Palm trees/decorative plants on left parapet wall and right boundary", "estimated_cost": "₹5K-10K each"}
+  {"identifier": "Pavement", "details": "Light grey concrete driveway with visible cracks, patches, slight incline", "estimated_cost": "₹500-800 per sq.m"}
+  {"identifier": "Interior Infrastructure", "details": "Red pipes and light fixtures visible on tunnel ceiling", "estimated_cost": "—"}
+  {"identifier": "Side Doors", "details": "2 small pedestrian doors flanking main tunnel (left and right)", "estimated_cost": "₹30K-50K each"}
+  {"identifier": "Interior Wall Feature", "details": "Yellow painted section with line art on left interior tunnel wall", "estimated_cost": "—"}
 
 Be specific and practical. Focus on information valuable for surveyors, property managers, and real estate professionals."""
 
@@ -239,8 +267,8 @@ Be specific and practical. Focus on information valuable for surveyors, property
                         ]
                     }
                 ],
-                max_tokens=4000,
-                temperature=0.2,  # Even lower for more consistency
+                max_tokens=8000,  # Increased for more detailed responses
+                temperature=0.3,  # Slightly higher for more comprehensive descriptions
                 response_format={"type": "json_object"},
                 seed=42  # Fixed seed for reproducibility
             )
@@ -276,8 +304,19 @@ Be specific and practical. Focus on information valuable for surveyors, property
             # Attempt fallback analysis with simplified prompt
             try:
                 return await self._fallback_analysis(image_path, start_time)
-            except:
+            except Exception as fallback_error:
+                print(f"Fallback analysis also failed: {fallback_error}")
+                # Return a basic structure even on failure
                 return {
+                    "scene_type": "unknown",
+                    "scene_overview": "Unable to analyze image. Please ensure the image is clear and try again.",
+                    "simplified_data": [
+                        {
+                            "identifier": "Analysis Status",
+                            "details": "Failed to process - please retry with a clearer image",
+                            "estimated_cost": "—"
+                        }
+                    ],
                     "error": str(e),
                     "processing_time_seconds": time.time() - start_time
                 }

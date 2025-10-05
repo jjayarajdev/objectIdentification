@@ -5,7 +5,8 @@ import ExifMetadata from './components/ExifMetadata';
 import CostTracker from './components/CostTracker';
 import ObjectsTable from './components/ObjectsTable';
 import SceneAnalysis from './components/SceneAnalysis';
-import { Camera, Download, FileJson, FileText, FileSpreadsheet, Loader, ChevronRight, ChevronLeft, Info } from 'lucide-react';
+import SurveyorDashboard from './components/SurveyorDashboard';
+import { Camera, Download, FileJson, FileText, FileSpreadsheet, Loader, ChevronRight, ChevronLeft, Info, Smartphone } from 'lucide-react';
 import { uploadSingleImage, uploadBatchImages, getImageExif, exportResults, downloadRoomReport } from './api/api';
 
 function App() {
@@ -17,6 +18,7 @@ function App() {
   const [processingStatus, setProcessingStatus] = useState('');
   const [error, setError] = useState(null);
   const [sidebarOpen, setSidebarOpen] = useState(false);
+  const [interfaceMode, setInterfaceMode] = useState('surveyor'); // 'surveyor' or 'classic'
 
   // Load EXIF data when selected image changes
   useEffect(() => {
@@ -157,6 +159,11 @@ function App() {
     setCurrentExif(null);
     setError(null);
   };
+
+  // Show surveyor dashboard for better UX
+  if (interfaceMode === 'surveyor') {
+    return <SurveyorDashboard />;
+  }
 
   return (
     <div className="min-h-screen bg-gray-100">
