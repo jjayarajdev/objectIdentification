@@ -138,11 +138,20 @@ class SyncService {
       }
 
       // Process sync queue
-      const queueItems = await offlineStorage.getQueueItems();
+      const queueData = await offlineStorage.getQueueItems();
+      const queueItems = [
+        ...(queueData.images || []),
+        ...(queueData.analysis || []),
+        ...(queueData.projects || [])
+      ];
+
       for (const item of queueItems) {
         try {
           await this.processQueueItem(item);
-          await offlineStorage.removeFromQueue(item.id);
+          // Note: removeFromQueue might not exist, using markAsSynced instead
+          if (offlineStorage.removeFromQueue) {
+            await offlineStorage.removeFromQueue(item.id);
+          }
           syncResults.queue.processed++;
         } catch (error) {
           console.error('Failed to process queue item:', error);

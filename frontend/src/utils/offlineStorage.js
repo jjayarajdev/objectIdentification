@@ -1,58 +1,62 @@
-/**
- * Offline Storage Utility for Surveyor Application
- * Manages local storage of images and analysis results for offline functionality
- */
+// Offline Storage Service for IndexedDB operations
+// Provides offline-first capabilities with background sync
 
 class OfflineStorage {
   constructor() {
-    this.dbName = 'SurveyorOfflineDB';
-    this.dbVersion = 1;
+    this.dbName = 'CBRESurveyorDB';
+    this.version = 2;
     this.db = null;
-    this.initDB();
   }
 
   async initDB() {
-    return new Promise((resolve, reject) => {
-      const request = indexedDB.open(this.dbName, this.dbVersion);
+    if (this.db) return this.db;
 
-      request.onerror = () => {
-        console.error('Failed to open IndexedDB');
-        reject(request.error);
+    return new Promise((resolve, reject) => {
+      const request = indexedDB.open(this.dbName, this.version);
+
+      request.onsuccess = (event) => {
+        this.db = event.target.result;
+        resolve(this.db);
       };
 
-      request.onsuccess = () => {
-        this.db = request.result;
-        resolve(this.db);
+      request.onerror = (event) => {
+        reject(new Error('Failed to open database'));
       };
 
       request.onupgradeneeded = (event) => {
         const db = event.target.result;
 
-        // Create object stores
+        // Create object stores if they don't exist
         if (!db.objectStoreNames.contains('images')) {
-          const imageStore = db.createObjectStore('images', { keyPath: 'id' });
-          imageStore.createIndex('timestamp', 'timestamp', { unique: false });
+          const imageStore = db.createObjectStore('images', {
+            keyPath: 'id',
+            autoIncrement: true
+          });
+          imageStore.createIndex('filename', 'filename', { unique: false });
           imageStore.createIndex('projectId', 'projectId', { unique: false });
           imageStore.createIndex('synced', 'synced', { unique: false });
+          imageStore.createIndex('timestamp', 'timestamp', { unique: false });
         }
 
         if (!db.objectStoreNames.contains('analysis')) {
-          const analysisStore = db.createObjectStore('analysis', { keyPath: 'id' });
+          const analysisStore = db.createObjectStore('analysis', {
+            keyPath: 'id',
+            autoIncrement: true
+          });
           analysisStore.createIndex('imageId', 'imageId', { unique: false });
-          analysisStore.createIndex('timestamp', 'timestamp', { unique: false });
+          analysisStore.createIndex('projectId', 'projectId', { unique: false });
           analysisStore.createIndex('synced', 'synced', { unique: false });
+          analysisStore.createIndex('timestamp', 'timestamp', { unique: false });
         }
 
         if (!db.objectStoreNames.contains('projects')) {
-          const projectStore = db.createObjectStore('projects', { keyPath: 'id' });
-          projectStore.createIndex('timestamp', 'timestamp', { unique: false });
+          const projectStore = db.createObjectStore('projects', {
+            keyPath: 'id',
+            autoIncrement: true
+          });
+          projectStore.createIndex('name', 'name', { unique: false });
           projectStore.createIndex('synced', 'synced', { unique: false });
-        }
-
-        if (!db.objectStoreNames.contains('queue')) {
-          const queueStore = db.createObjectStore('queue', { keyPath: 'id' });
-          queueStore.createIndex('timestamp', 'timestamp', { unique: false });
-          queueStore.createIndex('type', 'type', { unique: false });
+          projectStore.createIndex('timestamp', 'timestamp', { unique: false });
         }
       };
     });
@@ -65,96 +69,115 @@ class OfflineStorage {
     return this.db;
   }
 
-  // Image Storage Methods
+  // Image operations
   async saveImage(imageData) {
     const db = await this.ensureDB();
     const transaction = db.transaction(['images'], 'readwrite');
     const store = transaction.objectStore('images');
 
     const imageRecord = {
-      id: imageData.id || `img_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`,
       filename: imageData.filename,
       blob: imageData.blob,
       size: imageData.size,
       type: imageData.type,
       projectId: imageData.projectId,
-      timestamp: new Date().toISOString(),
+      metadata: imageData.metadata || {},
       synced: false,
-      metadata: imageData.metadata || {}
+      syncedAt: null,
+      timestamp: new Date().toISOString()
     };
 
     return new Promise((resolve, reject) => {
       const request = store.add(imageRecord);
-      request.onsuccess = () => resolve(imageRecord);
+      request.onsuccess = () => {
+        imageRecord.id = request.result;
+        resolve(imageRecord);
+      };
       request.onerror = () => reject(request.error);
     });
   }
 
-  async getImage(imageId) {
+  async getImage(id) {
     const db = await this.ensureDB();
     const transaction = db.transaction(['images'], 'readonly');
     const store = transaction.objectStore('images');
 
     return new Promise((resolve, reject) => {
-      const request = store.get(imageId);
+      const request = store.get(id);
       request.onsuccess = () => resolve(request.result);
       request.onerror = () => reject(request.error);
     });
   }
 
-  async getProjectImages(projectId) {
+  async getAllImages() {
     const db = await this.ensureDB();
     const transaction = db.transaction(['images'], 'readonly');
     const store = transaction.objectStore('images');
-    const index = store.index('projectId');
 
     return new Promise((resolve, reject) => {
-      const request = index.getAll(projectId);
+      const request = store.getAll();
       request.onsuccess = () => resolve(request.result);
       request.onerror = () => reject(request.error);
     });
   }
 
-  // Analysis Storage Methods
+  async deleteImage(id) {
+    const db = await this.ensureDB();
+    const transaction = db.transaction(['images'], 'readwrite');
+    const store = transaction.objectStore('images');
+
+    return new Promise((resolve, reject) => {
+      const request = store.delete(id);
+      request.onsuccess = () => resolve();
+      request.onerror = () => reject(request.error);
+    });
+  }
+
+  // Analysis operations
   async saveAnalysis(analysisData) {
     const db = await this.ensureDB();
     const transaction = db.transaction(['analysis'], 'readwrite');
     const store = transaction.objectStore('analysis');
 
     const analysisRecord = {
-      id: analysisData.id || `analysis_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`,
       imageId: analysisData.imageId,
+      projectId: analysisData.projectId,
       sceneType: analysisData.sceneType,
       sceneOverview: analysisData.sceneOverview,
-      simplifiedData: analysisData.simplifiedData,
+      detectedItems: analysisData.detectedItems || [],
+      simplifiedData: analysisData.simplifiedData || [],
       narrativeReport: analysisData.narrativeReport,
-      analysisData: analysisData.analysisData,
-      keyObservations: analysisData.keyObservations,
-      estimatedPropertyValue: analysisData.estimatedPropertyValue,
-      timestamp: new Date().toISOString(),
-      synced: false
+      estimatedValue: analysisData.estimatedValue,
+      keyObservations: analysisData.keyObservations || [],
+      metadata: analysisData.metadata || {},
+      synced: false,
+      syncedAt: null,
+      timestamp: new Date().toISOString()
     };
 
     return new Promise((resolve, reject) => {
       const request = store.add(analysisRecord);
-      request.onsuccess = () => resolve(analysisRecord);
+      request.onsuccess = () => {
+        analysisRecord.id = request.result;
+        resolve(analysisRecord);
+      };
       request.onerror = () => reject(request.error);
     });
   }
 
-  async getAnalysis(analysisId) {
+  async getAnalysis(id) {
     const db = await this.ensureDB();
     const transaction = db.transaction(['analysis'], 'readonly');
     const store = transaction.objectStore('analysis');
 
     return new Promise((resolve, reject) => {
-      const request = store.get(analysisId);
+      const request = store.get(id);
       request.onsuccess = () => resolve(request.result);
       request.onerror = () => reject(request.error);
     });
   }
 
-  async getImageAnalysis(imageId) {
+  async getAnalysisByImageId(imageId) {
     const db = await this.ensureDB();
     const transaction = db.transaction(['analysis'], 'readonly');
     const store = transaction.objectStore('analysis');
@@ -167,38 +190,52 @@ class OfflineStorage {
     });
   }
 
-  // Project Storage Methods
+  async getAllAnalysis() {
+    const db = await this.ensureDB();
+    const transaction = db.transaction(['analysis'], 'readonly');
+    const store = transaction.objectStore('analysis');
+
+    return new Promise((resolve, reject) => {
+      const request = store.getAll();
+      request.onsuccess = () => resolve(request.result);
+      request.onerror = () => reject(request.error);
+    });
+  }
+
+  // Project operations
   async saveProject(projectData) {
     const db = await this.ensureDB();
     const transaction = db.transaction(['projects'], 'readwrite');
     const store = transaction.objectStore('projects');
 
     const projectRecord = {
-      id: projectData.id || `proj_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`,
       name: projectData.name,
       description: projectData.description,
       location: projectData.location,
-      client: projectData.client,
-      timestamp: new Date().toISOString(),
-      lastModified: new Date().toISOString(),
+      clientName: projectData.clientName,
+      metadata: projectData.metadata || {},
       synced: false,
-      metadata: projectData.metadata || {}
+      syncedAt: null,
+      timestamp: new Date().toISOString()
     };
 
     return new Promise((resolve, reject) => {
       const request = store.add(projectRecord);
-      request.onsuccess = () => resolve(projectRecord);
+      request.onsuccess = () => {
+        projectRecord.id = request.result;
+        resolve(projectRecord);
+      };
       request.onerror = () => reject(request.error);
     });
   }
 
-  async getProject(projectId) {
+  async getProject(id) {
     const db = await this.ensureDB();
     const transaction = db.transaction(['projects'], 'readonly');
     const store = transaction.objectStore('projects');
 
     return new Promise((resolve, reject) => {
-      const request = store.get(projectId);
+      const request = store.get(id);
       request.onsuccess = () => resolve(request.result);
       request.onerror = () => reject(request.error);
     });
@@ -216,122 +253,71 @@ class OfflineStorage {
     });
   }
 
-  async updateProject(projectId, updates) {
+  // Storage stats
+  async getStorageStats() {
     const db = await this.ensureDB();
-    const transaction = db.transaction(['projects'], 'readwrite');
-    const store = transaction.objectStore('projects');
-
-    const project = await this.getProject(projectId);
-    if (!project) {
-      throw new Error('Project not found');
-    }
-
-    const updatedProject = {
-      ...project,
-      ...updates,
-      lastModified: new Date().toISOString(),
-      synced: false
+    const stats = {
+      images: { count: 0, totalSize: 0 },
+      analysis: { count: 0 },
+      projects: { count: 0 }
     };
 
-    return new Promise((resolve, reject) => {
-      const request = store.put(updatedProject);
-      request.onsuccess = () => resolve(updatedProject);
-      request.onerror = () => reject(request.error);
-    });
+    // Get image stats
+    const images = await this.getAllImages();
+    stats.images.count = images.length;
+    stats.images.totalSize = images.reduce((total, img) => total + (img.size || 0), 0);
+
+    // Get analysis stats
+    const analysis = await this.getAllAnalysis();
+    stats.analysis.count = analysis.length;
+
+    // Get project stats
+    const projects = await this.getAllProjects();
+    stats.projects.count = projects.length;
+
+    return stats;
   }
 
-  // Queue Management for Sync
-  async addToQueue(item) {
-    const db = await this.ensureDB();
-    const transaction = db.transaction(['queue'], 'readwrite');
-    const store = transaction.objectStore('queue');
-
-    const queueItem = {
-      id: `queue_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`,
-      type: item.type, // 'image', 'analysis', 'project'
-      action: item.action, // 'create', 'update', 'delete'
-      data: item.data,
-      timestamp: new Date().toISOString(),
-      retryCount: 0
-    };
-
-    return new Promise((resolve, reject) => {
-      const request = store.add(queueItem);
-      request.onsuccess = () => resolve(queueItem);
-      request.onerror = () => reject(request.error);
-    });
-  }
-
-  async getQueueItems() {
-    const db = await this.ensureDB();
-    const transaction = db.transaction(['queue'], 'readonly');
-    const store = transaction.objectStore('queue');
-
-    return new Promise((resolve, reject) => {
-      const request = store.getAll();
-      request.onsuccess = () => resolve(request.result);
-      request.onerror = () => reject(request.error);
-    });
-  }
-
-  async removeFromQueue(queueId) {
-    const db = await this.ensureDB();
-    const transaction = db.transaction(['queue'], 'readwrite');
-    const store = transaction.objectStore('queue');
-
-    return new Promise((resolve, reject) => {
-      const request = store.delete(queueId);
-      request.onsuccess = () => resolve();
-      request.onerror = () => reject(request.error);
-    });
-  }
-
-  // Sync Methods
+  // Sync operations
   async getUnsyncedItems() {
-    const db = await this.ensureDB();
-    const unsynced = {
-      images: [],
-      analysis: [],
-      projects: []
-    };
+    try {
+      const db = await this.ensureDB();
+      const unsynced = { images: [], analysis: [], projects: [] };
 
-    // Get unsynced images
-    const imageTransaction = db.transaction(['images'], 'readonly');
-    const imageStore = imageTransaction.objectStore('images');
-    const imageSyncIndex = imageStore.index('synced');
+      // Get all images and filter for unsynced
+      try {
+        const images = await this.getAllImages();
+        unsynced.images = images.filter(item => item.synced === false);
+      } catch (err) {
+        console.log('Error getting unsynced images:', err);
+      }
 
-    const images = await new Promise((resolve, reject) => {
-      const request = imageSyncIndex.getAll(false);
-      request.onsuccess = () => resolve(request.result);
-      request.onerror = () => reject(request.error);
-    });
-    unsynced.images = images;
+      // Get all analysis and filter for unsynced
+      try {
+        const analysis = await this.getAllAnalysis();
+        unsynced.analysis = analysis.filter(item => item.synced === false);
+      } catch (err) {
+        console.log('Error getting unsynced analysis:', err);
+      }
 
-    // Get unsynced analysis
-    const analysisTransaction = db.transaction(['analysis'], 'readonly');
-    const analysisStore = analysisTransaction.objectStore('analysis');
-    const analysisSyncIndex = analysisStore.index('synced');
+      // Get all projects and filter for unsynced
+      try {
+        const projects = await this.getAllProjects();
+        unsynced.projects = projects.filter(item => item.synced === false);
+      } catch (err) {
+        console.log('Error getting unsynced projects:', err);
+      }
 
-    const analysis = await new Promise((resolve, reject) => {
-      const request = analysisSyncIndex.getAll(false);
-      request.onsuccess = () => resolve(request.result);
-      request.onerror = () => reject(request.error);
-    });
-    unsynced.analysis = analysis;
+      return unsynced;
+    } catch (err) {
+      console.error('Error in getUnsyncedItems:', err);
+      return { images: [], analysis: [], projects: [] };
+    }
+  }
 
-    // Get unsynced projects
-    const projectTransaction = db.transaction(['projects'], 'readonly');
-    const projectStore = projectTransaction.objectStore('projects');
-    const projectSyncIndex = projectStore.index('synced');
-
-    const projects = await new Promise((resolve, reject) => {
-      const request = projectSyncIndex.getAll(false);
-      request.onsuccess = () => resolve(request.result);
-      request.onerror = () => reject(request.error);
-    });
-    unsynced.projects = projects;
-
-    return unsynced;
+  // Alias for getUnsyncedItems for compatibility
+  async getQueueItems() {
+    return this.getUnsyncedItems();
   }
 
   async markAsSynced(type, id) {
@@ -345,27 +331,25 @@ class OfflineStorage {
       request.onerror = () => reject(request.error);
     });
 
-    if (!item) {
-      throw new Error(`${type} item not found`);
+    if (item) {
+      item.synced = true;
+      item.syncedAt = new Date().toISOString();
+
+      return new Promise((resolve, reject) => {
+        const request = store.put(item);
+        request.onsuccess = () => resolve();
+        request.onerror = () => reject(request.error);
+      });
     }
-
-    item.synced = true;
-
-    return new Promise((resolve, reject) => {
-      const request = store.put(item);
-      request.onsuccess = () => resolve(item);
-      request.onerror = () => reject(request.error);
-    });
   }
 
-  // Utility Methods
+  // Clear operations
   async clearAll() {
     const db = await this.ensureDB();
-    const stores = ['images', 'analysis', 'projects', 'queue'];
+    const transaction = db.transaction(['images', 'analysis', 'projects'], 'readwrite');
 
-    const promises = stores.map(storeName => {
+    const promises = ['images', 'analysis', 'projects'].map(storeName => {
       return new Promise((resolve, reject) => {
-        const transaction = db.transaction([storeName], 'readwrite');
         const store = transaction.objectStore(storeName);
         const request = store.clear();
         request.onsuccess = () => resolve();
@@ -376,58 +360,16 @@ class OfflineStorage {
     return Promise.all(promises);
   }
 
-  async getStorageStats() {
+  async clearStore(storeName) {
     const db = await this.ensureDB();
-    const stats = {
-      images: { count: 0, totalSize: 0 },
-      analysis: { count: 0 },
-      projects: { count: 0 },
-      queue: { count: 0 }
-    };
+    const transaction = db.transaction([storeName], 'readwrite');
+    const store = transaction.objectStore(storeName);
 
-    // Get image stats
-    const imageTransaction = db.transaction(['images'], 'readonly');
-    const imageStore = imageTransaction.objectStore('images');
-    const images = await new Promise((resolve, reject) => {
-      const request = imageStore.getAll();
-      request.onsuccess = () => resolve(request.result);
+    return new Promise((resolve, reject) => {
+      const request = store.clear();
+      request.onsuccess = () => resolve();
       request.onerror = () => reject(request.error);
     });
-
-    stats.images.count = images.length;
-    stats.images.totalSize = images.reduce((sum, img) => sum + (img.size || 0), 0);
-
-    // Get analysis count
-    const analysisTransaction = db.transaction(['analysis'], 'readonly');
-    const analysisStore = analysisTransaction.objectStore('analysis');
-    const analysisCount = await new Promise((resolve, reject) => {
-      const request = analysisStore.count();
-      request.onsuccess = () => resolve(request.result);
-      request.onerror = () => reject(request.error);
-    });
-    stats.analysis.count = analysisCount;
-
-    // Get project count
-    const projectTransaction = db.transaction(['projects'], 'readonly');
-    const projectStore = projectTransaction.objectStore('projects');
-    const projectCount = await new Promise((resolve, reject) => {
-      const request = projectStore.count();
-      request.onsuccess = () => resolve(request.result);
-      request.onerror = () => reject(request.error);
-    });
-    stats.projects.count = projectCount;
-
-    // Get queue count
-    const queueTransaction = db.transaction(['queue'], 'readonly');
-    const queueStore = queueTransaction.objectStore(['queue']);
-    const queueCount = await new Promise((resolve, reject) => {
-      const request = queueStore.count();
-      request.onsuccess = () => resolve(request.result);
-      request.onerror = () => reject(request.error);
-    });
-    stats.queue.count = queueCount;
-
-    return stats;
   }
 }
 

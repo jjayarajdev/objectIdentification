@@ -4,7 +4,7 @@ from fastapi.staticfiles import StaticFiles
 import os
 
 from app.config import settings
-from app.routers import upload, detection, exif, export, health, room_analysis
+from app.routers import upload, detection, exif, export, health, room_analysis, config
 
 # Create FastAPI app
 app = FastAPI(
@@ -37,6 +37,7 @@ app.include_router(detection.router, prefix="/api/v1", tags=["Detection"])
 app.include_router(exif.router, prefix="/api/v1", tags=["EXIF"])
 app.include_router(export.router, prefix="/api/v1", tags=["Export"])
 app.include_router(room_analysis.router, prefix="/api/room-analysis", tags=["Room Intelligence"])
+app.include_router(config.router, tags=["Configuration"])
 
 @app.on_event("startup")
 async def startup_event():

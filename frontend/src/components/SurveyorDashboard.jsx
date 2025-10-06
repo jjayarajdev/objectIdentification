@@ -5,10 +5,11 @@ import {
   List, Plus, Home, FileText, Database,
   ChevronRight, Check, X, AlertTriangle,
   Smartphone, Monitor, Tablet, RefreshCw, HardDrive,
-  Edit2, Trash2
+  Edit2, Trash2, Map
 } from 'lucide-react';
-import SceneAnalysis from './SceneAnalysis';
+import SceneAnalysisWithMap from './SceneAnalysisWithMap';
 import ImageAnnotator from './ImageAnnotator';
+import PhotoLocationViewer from './PhotoLocationViewer';
 import offlineStorage from '../utils/offlineStorage';
 import syncService from '../utils/syncService';
 import exportService from '../utils/exportService';
@@ -29,6 +30,8 @@ const SurveyorDashboard = () => {
   const [storageStats, setStorageStats] = useState(null);
   const [showAnnotator, setShowAnnotator] = useState(false);
   const [imageToAnnotate, setImageToAnnotate] = useState(null);
+  const [showLocationViewer, setShowLocationViewer] = useState(false);
+  const [imageToLocate, setImageToLocate] = useState(null);
   const fileInputRef = useRef(null);
   const cameraInputRef = useRef(null);
 
@@ -59,6 +62,12 @@ const SurveyorDashboard = () => {
     const imageUrl = URL.createObjectURL(file);
     setImageToAnnotate({ url: imageUrl, file });
     setShowAnnotator(true);
+  };
+
+  const handleViewLocation = (file) => {
+    const imageUrl = URL.createObjectURL(file);
+    setImageToLocate({ url: imageUrl, file });
+    setShowLocationViewer(true);
   };
 
   const handleSaveAnnotatedImage = (annotatedData) => {
@@ -133,6 +142,7 @@ const SurveyorDashboard = () => {
               fileName: file.name,
               timestamp: new Date().toISOString(),
               location: await getCurrentLocation(),
+              imageFile: file,  // Add the original file for EXIF extraction
               // Ensure consistent field naming for exports
               sceneType: result.scene_type,
               sceneOverview: result.scene_overview,
@@ -179,6 +189,7 @@ const SurveyorDashboard = () => {
             fileName: file.name,
             timestamp: new Date().toISOString(),
             location: await getCurrentLocation(),
+            imageFile: file,  // Add the original file for EXIF extraction
             imageUrl: URL.createObjectURL(file)
           });
         }
@@ -603,6 +614,13 @@ const SurveyorDashboard = () => {
                         >
                           <Edit2 className="w-4 h-4" />
                         </button>
+                        <button
+                          onClick={() => handleViewLocation(file)}
+                          className="p-2 bg-green-500 text-white rounded-full hover:bg-green-600 transition-colors"
+                          title="View Location"
+                        >
+                          <Map className="w-4 h-4" />
+                        </button>
                       </div>
                       <button
                         onClick={() => setSelectedFiles(files => files.filter((_, i) => i !== idx))}
@@ -740,10 +758,11 @@ const SurveyorDashboard = () => {
                           </div>
                         </div>
 
-                        {/* Scene Analysis Component */}
-                        <SceneAnalysis
+                        {/* Scene Analysis Component with Map */}
+                        <SceneAnalysisWithMap
                           analysis={analysisResults[selectedAnalysisIndex]}
-                          loading={false}
+                          fileName={analysisResults[selectedAnalysisIndex].fileName}
+                          imageFile={analysisResults[selectedAnalysisIndex].imageFile}
                         />
                       </>
                     )}
@@ -895,6 +914,18 @@ const SurveyorDashboard = () => {
           onClose={() => {
             setShowAnnotator(false);
             setImageToAnnotate(null);
+          }}
+        />
+      )}
+
+      {/* Photo Location Viewer Modal */}
+      {showLocationViewer && imageToLocate && (
+        <PhotoLocationViewer
+          file={imageToLocate.file}
+          imageUrl={imageToLocate.url}
+          onClose={() => {
+            setShowLocationViewer(false);
+            setImageToLocate(null);
           }}
         />
       )}
