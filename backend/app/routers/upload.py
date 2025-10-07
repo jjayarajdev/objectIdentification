@@ -1,4 +1,4 @@
-from fastapi import APIRouter, File, UploadFile, HTTPException, Form
+from fastapi import APIRouter, File, UploadFile, HTTPException, Form, Request
 from fastapi.responses import JSONResponse
 from typing import List, Optional
 import os
@@ -7,11 +7,13 @@ from datetime import datetime
 import shutil
 from pathlib import Path
 import asyncio
+import time
 
 from app.config import settings
 from app.models import UploadResponse, ImageResult
 from app.services.image_processor import ImageProcessor
 from app.services.storage import StorageService
+from app.middleware import log_image_upload, log_analysis_result, log_openai_api_call
 
 router = APIRouter()
 
@@ -21,6 +23,7 @@ storage_service = StorageService()
 
 @router.post("/upload", response_model=UploadResponse)
 async def upload_single_image(
+    request: Request,
     file: UploadFile = File(...),
     process_immediately: bool = Form(True)
 ):
@@ -28,12 +31,16 @@ async def upload_single_image(
     Upload a single image and optionally process it immediately.
 
     Args:
+        request: The FastAPI request object
         file: The image file to upload
         process_immediately: Whether to process the image immediately after upload
 
     Returns:
         UploadResponse with image details and processing results
     """
+    # Get transaction ID from request state (set by middleware)
+    transaction_id = getattr(request.state, 'transaction_id', None)
+
     try:
         # Validate file extension
         file_ext = Path(file.filename).suffix.lower()
@@ -67,6 +74,18 @@ async def upload_single_image(
             file_ext
         )
 
+        # Log the image upload if transaction tracking is enabled
+        if transaction_id:
+            log_image_upload(
+                transaction_id=transaction_id,
+                filename=file.filename,
+                file_size=file_size,
+                file_type=file_ext,
+                upload_path=saved_path,
+                metadata={'image_id': image_id},
+                status='success'
+            )
+
         # Create initial image result
         image_result = ImageResult(
             filename=file.filename,
@@ -87,6 +106,7 @@ async def upload_single_image(
                 scene_analyzer = SceneAnalyzer()
 
                 print(f"Starting comprehensive analysis for {saved_path}")
+                analysis_start_time = time.time()
 
                 # Perform adaptive scene analysis
                 scene_analysis = await scene_analyzer.analyze_scene(saved_path)
@@ -98,6 +118,18 @@ async def upload_single_image(
                 # Calculate cost
                 cost_estimate = gpt_vision.calculate_cost(token_usage)
                 print(f"Cost estimate: ${cost_estimate.total_cost:.4f}")
+
+                # Log OpenAI API call
+                if transaction_id:
+                    log_openai_api_call(
+                        transaction_id=transaction_id,
+                        endpoint='chat/completions',
+                        model='gpt-4o',
+                        tokens_used=token_usage.get('total_tokens', 0),
+                        cost_usd=cost_estimate.total_cost,
+                        latency_ms=int(processing_time * 1000),
+                        status='success'
+                    )
 
                 # Extract EXIF metadata
                 exif_metadata = exif_extractor.extract_metadata(saved_path)
@@ -112,6 +144,21 @@ async def upload_single_image(
 
                 # Add scene analysis data
                 image_result.room_analysis = scene_analysis  # Keep field name for compatibility
+
+                # Calculate total analysis time
+                total_analysis_time = int((time.time() - analysis_start_time) * 1000)
+
+                # Log analysis result
+                if transaction_id:
+                    log_analysis_result(
+                        transaction_id=transaction_id,
+                        filename=file.filename,
+                        analysis_data=scene_analysis,
+                        processing_time_ms=total_analysis_time,
+                        tokens_used=token_usage.get('total_tokens', 0),
+                        cost_usd=cost_estimate.total_cost,
+                        status='success'
+                    )
 
                 # Log the objects being sent
                 print(f"Sending {len(detected_objects)} objects to frontend:")

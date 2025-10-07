@@ -123,6 +123,7 @@ const SceneAnalysisWithMap = ({ analysis, fileName, imageFile }) => {
   };
 
   const sceneOverview = analysis.scene_overview || analysis.sceneOverview;
+  // Use the items data directly - the backend should provide the correct format
   const itemsData = analysis.simplified_data || analysis.simplifiedData || [];
   const keyObservations = analysis.key_observations || analysis.keyObservations || [];
   const narrativeReport = analysis.narrative_report || analysis.narrativeReport;
@@ -209,22 +210,34 @@ const SceneAnalysisWithMap = ({ analysis, fileName, imageFile }) => {
               <table className="w-full border-collapse">
                 <thead>
                   <tr className="bg-gray-100">
+                    <th className="border border-gray-300 px-3 py-2 text-center font-semibold">#</th>
                     <th className="border border-gray-300 px-4 py-2 text-left font-semibold">Category</th>
-                    <th className="border border-gray-300 px-4 py-2 text-left font-semibold">Details</th>
-                    <th className="border border-gray-300 px-4 py-2 text-left font-semibold">Est. Cost</th>
+                    <th className="border border-gray-300 px-4 py-2 text-left font-semibold">Object/Element</th>
+                    <th className="border border-gray-300 px-4 py-2 text-left font-semibold">Description</th>
+                    <th className="border border-gray-300 px-4 py-2 text-left font-semibold">Position</th>
+                    <th className="border border-gray-300 px-4 py-2 text-left font-semibold">Est. Cost (INR)</th>
                   </tr>
                 </thead>
                 <tbody>
                   {itemsData.map((item, index) => (
                     <tr key={index} className={index % 2 === 0 ? 'bg-white' : 'bg-gray-50'}>
+                      <td className="border border-gray-300 px-3 py-2 text-center font-medium">
+                        {index + 1}
+                      </td>
                       <td className="border border-gray-300 px-4 py-2 font-medium">
-                        {item.identifier || item.category}
+                        {item.category || 'Unknown'}
                       </td>
                       <td className="border border-gray-300 px-4 py-2">
-                        {item.details || item.description}
+                        {item.object || item.identifier || ''}
+                      </td>
+                      <td className="border border-gray-300 px-4 py-2 text-sm">
+                        {item.details || ''}
+                      </td>
+                      <td className="border border-gray-300 px-4 py-2 text-sm">
+                        {item.position || '—'}
                       </td>
                       <td className="border border-gray-300 px-4 py-2">
-                        {item.estimated_cost || item.estimatedCost || '—'}
+                        {item.estimated_cost || '—'}
                       </td>
                     </tr>
                   ))}

@@ -4,7 +4,8 @@ from fastapi.staticfiles import StaticFiles
 import os
 
 from app.config import settings
-from app.routers import upload, detection, exif, export, health, room_analysis, config
+from app.routers import upload, detection, exif, export, health, room_analysis, config, transactions
+from app.middleware import TransactionLoggingMiddleware
 
 # Create FastAPI app
 app = FastAPI(
@@ -12,6 +13,9 @@ app = FastAPI(
     description="Advanced room analysis with object detection, cost estimation, comprehensive reporting, and Word document generation",
     version="1.0.0"
 )
+
+# Add Transaction Logging Middleware
+app.add_middleware(TransactionLoggingMiddleware)
 
 # Configure CORS
 app.add_middleware(
@@ -38,6 +42,7 @@ app.include_router(exif.router, prefix="/api/v1", tags=["EXIF"])
 app.include_router(export.router, prefix="/api/v1", tags=["Export"])
 app.include_router(room_analysis.router, prefix="/api/room-analysis", tags=["Room Intelligence"])
 app.include_router(config.router, tags=["Configuration"])
+app.include_router(transactions.router, tags=["Transactions"])
 
 @app.on_event("startup")
 async def startup_event():

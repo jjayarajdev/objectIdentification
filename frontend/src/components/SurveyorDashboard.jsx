@@ -5,9 +5,10 @@ import {
   List, Plus, Home, FileText, Database,
   ChevronRight, Check, X, AlertTriangle,
   Smartphone, Monitor, Tablet, RefreshCw, HardDrive,
-  Edit2, Trash2, Map
+  Edit2, Trash2, Map, BarChart3
 } from 'lucide-react';
 import SceneAnalysisWithMap from './SceneAnalysisWithMap';
+import Analytics from './Analytics';
 import ImageAnnotator from './ImageAnnotator';
 import PhotoLocationViewer from './PhotoLocationViewer';
 import offlineStorage from '../utils/offlineStorage';
@@ -21,7 +22,7 @@ const SurveyorDashboard = () => {
   const [selectedAnalysisIndex, setSelectedAnalysisIndex] = useState(0);
   const [loading, setLoading] = useState(false);
   const [viewMode, setViewMode] = useState('grid'); // grid or list
-  const [activeTab, setActiveTab] = useState('capture'); // capture, analysis, reports
+  const [activeTab, setActiveTab] = useState('capture'); // capture, analysis, analytics
   const [isOnline, setIsOnline] = useState(navigator.onLine);
   const [currentProject, setCurrentProject] = useState('New Survey');
   const [batchProgress, setBatchProgress] = useState({ current: 0, total: 0 });
@@ -495,15 +496,15 @@ const SurveyorDashboard = () => {
             )}
           </button>
           <button
-            onClick={() => setActiveTab('reports')}
+            onClick={() => setActiveTab('analytics')}
             className={`flex-1 py-3 px-4 text-sm font-medium transition-colors ${
-              activeTab === 'reports'
+              activeTab === 'analytics'
                 ? 'text-blue-600 border-b-2 border-blue-600 bg-blue-50'
                 : 'text-gray-600 hover:text-gray-900'
             }`}
           >
-            <FileText className="w-4 h-4 mx-auto mb-1" />
-            Reports
+            <BarChart3 className="w-4 h-4 mx-auto mb-1" />
+            Analytics
           </button>
         </div>
       </header>
@@ -779,129 +780,9 @@ const SurveyorDashboard = () => {
           </div>
         )}
 
-        {activeTab === 'reports' && (
-          <div className="p-4 space-y-4">
-            <div className="bg-white rounded-lg p-4">
-              <h3 className="text-sm font-medium text-gray-700 mb-4">Export Options</h3>
-              <div className="space-y-3">
-                <button
-                  onClick={exportToPDF}
-                  className="w-full p-3 border rounded-lg hover:bg-gray-50 flex items-center justify-between"
-                >
-                  <div className="flex items-center gap-3">
-                    <FileText className="w-5 h-5 text-red-600" />
-                    <div className="text-left">
-                      <p className="font-medium">PDF Report</p>
-                      <p className="text-xs text-gray-500">Professional formatted document</p>
-                    </div>
-                  </div>
-                  <ChevronRight className="w-4 h-4 text-gray-400" />
-                </button>
-
-                <button
-                  onClick={exportToExcel}
-                  className="w-full p-3 border rounded-lg hover:bg-gray-50 flex items-center justify-between"
-                >
-                  <div className="flex items-center gap-3">
-                    <Grid className="w-5 h-5 text-green-600" />
-                    <div className="text-left">
-                      <p className="font-medium">Excel Spreadsheet</p>
-                      <p className="text-xs text-gray-500">Data analysis and calculations</p>
-                    </div>
-                  </div>
-                  <ChevronRight className="w-4 h-4 text-gray-400" />
-                </button>
-
-                <button
-                  onClick={exportToCSV}
-                  className="w-full p-3 border rounded-lg hover:bg-gray-50 flex items-center justify-between"
-                >
-                  <div className="flex items-center gap-3">
-                    <FileText className="w-5 h-5 text-blue-600" />
-                    <div className="text-left">
-                      <p className="font-medium">CSV Export</p>
-                      <p className="text-xs text-gray-500">Simple data table format</p>
-                    </div>
-                  </div>
-                  <ChevronRight className="w-4 h-4 text-gray-400" />
-                </button>
-
-                <button
-                  onClick={handleManualSync}
-                  disabled={!isOnline || syncStatus.syncing}
-                  className="w-full p-3 border rounded-lg hover:bg-gray-50 flex items-center justify-between disabled:opacity-50"
-                >
-                  <div className="flex items-center gap-3">
-                    <Cloud className="w-5 h-5 text-blue-600" />
-                    <div className="text-left">
-                      <p className="font-medium">Cloud Sync</p>
-                      <p className="text-xs text-gray-500">
-                        {syncStatus.syncing ? 'Syncing...' :
-                         syncStatus.pending > 0 ? `${syncStatus.pending} items pending` :
-                         'All synced'}
-                      </p>
-                    </div>
-                  </div>
-                  {syncStatus.syncing ? (
-                    <RefreshCw className="w-4 h-4 text-gray-400 animate-spin" />
-                  ) : (
-                    <ChevronRight className="w-4 h-4 text-gray-400" />
-                  )}
-                </button>
-              </div>
-            </div>
-
-            {/* Recent Reports */}
-            <div className="bg-white rounded-lg p-4">
-              <h3 className="text-sm font-medium text-gray-700 mb-4">Recent Reports</h3>
-              <div className="space-y-2">
-                <div className="p-3 border rounded-lg flex items-center justify-between">
-                  <div className="flex items-center gap-3">
-                    <Clock className="w-4 h-4 text-gray-400" />
-                    <div>
-                      <p className="text-sm font-medium">Site Survey - Building A</p>
-                      <p className="text-xs text-gray-500">Today, 2:30 PM</p>
-                    </div>
-                  </div>
-                  <Download className="w-4 h-4 text-gray-400" />
-                </div>
-              </div>
-            </div>
-
-            {/* Offline Storage Stats */}
-            {storageStats && (
-              <div className="bg-white rounded-lg p-4">
-                <div className="flex justify-between items-center mb-4">
-                  <h3 className="text-sm font-medium text-gray-700">Offline Storage</h3>
-                  <button
-                    onClick={handleClearOfflineData}
-                    className="text-xs text-red-600 hover:text-red-700"
-                  >
-                    Clear All
-                  </button>
-                </div>
-                <div className="space-y-2 text-sm">
-                  <div className="flex justify-between">
-                    <span className="text-gray-500">Images:</span>
-                    <span className="font-medium">{storageStats.images.count}</span>
-                  </div>
-                  <div className="flex justify-between">
-                    <span className="text-gray-500">Analysis:</span>
-                    <span className="font-medium">{storageStats.analysis.count}</span>
-                  </div>
-                  <div className="flex justify-between">
-                    <span className="text-gray-500">Projects:</span>
-                    <span className="font-medium">{storageStats.projects.count}</span>
-                  </div>
-                  <div className="flex justify-between">
-                    <span className="text-gray-500">Storage Used:</span>
-                    <span className="font-medium">
-                      {(storageStats.images.totalSize / 1024 / 1024).toFixed(1)} MB
-                    </span>
-                  </div>
-                </div>
-              </div>
-            )}
+        {activeTab === 'analytics' && (
+          <div className="p-4">
+            <Analytics />
           </div>
         )}
       </main>
