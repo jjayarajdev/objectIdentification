@@ -28,6 +28,9 @@ class Settings:
     upload_folder: str = os.getenv("UPLOAD_FOLDER", "./uploads")
     results_folder: str = os.getenv("RESULTS_FOLDER", "./results")
 
+    # Google Maps Configuration
+    google_maps_api_key: str = os.getenv("GOOGLE_MAPS_API_KEY", "")
+
     # CORS Configuration
     cors_origins: list = ["http://localhost:3000", "http://localhost:5173"]
 

@@ -33,58 +33,40 @@ class SceneAnalyzer:
         """
         import re
 
-        enhanced_data = []
-        for item in simplified_data:
-            enhanced_item = {
-                "identifier": item.get("identifier", "Unknown"),
-                "details": item.get("details", ""),
-                "estimated_cost": item.get("estimated_cost", "—")
-            }
-
-            # Check if details already contains a count
-            details = enhanced_item["details"]
-
-            # Common patterns for extracting counts
-            count_patterns = [
-                r"^(\d+)\s+",  # "5 cones"
-                r"^(\d+)x\s+",  # "5x chairs"
-                r"\((\d+)\)",  # "(5)"
-                r":\s*(\d+)",  # ": 5"
-                r"^\s*(\d+)$",  # Just a number
+        # If no data or empty list, return a default entry
+        if not simplified_data or len(simplified_data) == 0:
+            return [
+                {
+                    "category": "General",
+                    "object": "Scene Contents",
+                    "details": "No specific items detected - manual entry required",
+                    "position": "—",
+                    "estimated_cost": "—"
+                }
             ]
 
-            has_count = False
-            for pattern in count_patterns:
-                if re.search(pattern, details):
-                    has_count = True
-                    break
+        enhanced_data = []
+        for item in simplified_data:
+            # Support both new format and old format for backward compatibility
+            if "category" in item and "object" in item:
+                # New format - just ensure all fields are present
+                enhanced_item = {
+                    "category": item.get("category", "Unknown"),
+                    "object": item.get("object", "Unknown"),
+                    "details": item.get("details", ""),
+                    "position": item.get("position", "—"),
+                    "estimated_cost": item.get("estimated_cost", "—")
+                }
+            else:
+                # Old format - convert to new format
+                enhanced_item = {
+                    "category": "Unknown",
+                    "object": item.get("identifier", "Unknown"),
+                    "details": item.get("details", ""),
+                    "position": "—",
+                    "estimated_cost": item.get("estimated_cost", "—")
+                }
 
-            # If no count found and it's a countable item, try to extract from identifier
-            if not has_count and enhanced_item["identifier"].lower() not in ["temperature", "people", "area", "height"]:
-                # Check if identifier has a count
-                for pattern in count_patterns:
-                    match = re.search(pattern, enhanced_item["identifier"])
-                    if match:
-                        count = match.group(1)
-                        # Add count to details if not already present
-                        if details and not details.startswith(count):
-                            enhanced_item["details"] = f"{count} {details}"
-                        has_count = True
-                        break
-
-                # If still no count and it's a plural word, add "Multiple"
-                if not has_count and details:
-                    plural_indicators = ["s ", "s,", "es ", "es,", "ies ", "ies,"]
-                    identifier_lower = enhanced_item["identifier"].lower()
-                    for indicator in plural_indicators:
-                        if indicator in identifier_lower or identifier_lower.endswith(indicator.strip(",")):
-                            if not any(word in details.lower() for word in ["multiple", "several", "various", "many"]):
-                                enhanced_item["details"] = f"Multiple {details.lower()}"
-                            break
-
-            # Ensure details is never empty for non-abstract categories
-            if not enhanced_item["details"] and enhanced_item["identifier"].lower() not in ["temperature", "area", "height"]:
-                enhanced_item["details"] = "1 unit"
 
             enhanced_data.append(enhanced_item)
 
@@ -104,78 +86,93 @@ class SceneAnalyzer:
         base64_image = self.encode_image(image_path)
 
         # Create adaptive analysis prompt
-        prompt = """You are an expert surveyor and property analyst. Analyze this image comprehensively.
+        prompt = """You are an expert surveyor analyzing property images. Provide a COMPREHENSIVE analysis with exact counts and specific details.
 
-FIRST, determine the SCENE TYPE:
+SCENE TYPE (choose one):
 - indoor_office
-- indoor_industrial (warehouse, factory floor)
+- indoor_residential
+- indoor_commercial
+- indoor_industrial
 - building_exterior
 - land_property
 - construction_site
-- infrastructure (roads, bridges, utilities)
-- agricultural
-- natural_landscape
+- infrastructure
 - parking_area
 - other
 
-Then provide a DETAILED ANALYSIS appropriate for the scene type. Include ONLY relevant categories:
+ANALYSIS REQUIREMENTS:
 
-FOR ALL SCENES, always include:
-1. **scene_overview**: Brief description of what the image shows
-2. **primary_features**: List of main elements visible
-3. **measurements**: Estimated dimensions, areas, distances where applicable
-4. **condition_assessment**: Current state, maintenance needs, quality
-5. **safety_observations**: Any safety concerns or compliance issues
+1. **Comprehensive Summary** (2-3 paragraphs):
+   - Overall scene description
+   - Purpose and function of the space
+   - Condition assessment
+   - Notable features and characteristics
 
-ADDITIONAL CATEGORIES based on scene:
+2. **Detailed Object Table**:
+   Count EVERYTHING visible. Be exhaustive. Include:
+   - EXACT counts (e.g., "9 Individuals", "3 Chairs", "1 Desk")
+   - Specific descriptions with colors, materials, conditions
+   - Precise positions in the image
+   - Estimated costs in INR where applicable
 
-FOR INDOOR SPACES:
-- occupancy: People count and distribution
-- furniture_equipment: Items present with materials
-- lighting_systems: Natural and artificial lighting
-- hvac_systems: Ventilation and temperature control
-- flooring: Type and condition
+   Categories to check:
+   - People (count individuals, describe activities)
+   - Furniture (desks, chairs, tables, cabinets, etc.)
+   - Lighting (fixtures, lamps, natural light sources)
+   - Electronics/Equipment (computers, monitors, printers, etc.)
+   - Flooring/Ceiling (type, condition, materials)
+   - Walls/Partitions (materials, colors, conditions)
+   - Doors/Windows (count, type, materials)
+   - Plants/Decor (indoor plants, artwork, decorations)
+   - Signage (signs, labels, boards)
+   - Safety/Security (cameras, alarms, emergency equipment)
+   - HVAC (air conditioning, ventilation, heating)
+   - Storage (shelves, racks, storage units)
+   - Infrastructure (cables, pipes, electrical fixtures)
+   - Vehicles (if parking/outdoor)
+   - Building Elements (structural features)
 
-FOR OUTDOOR PROPERTY/LAND:
-- land_area: Estimated size and boundaries
-- terrain: Topography, slope, drainage
-- vegetation: Trees, grass, landscaping
-- structures: Buildings, fences, utilities
-- accessibility: Roads, pathways, entrances
+3. **Key Observations** (5-8 bullet points):
+   - Most important findings
+   - Maintenance needs
+   - Safety concerns
+   - Recommendations
 
-FOR BUILDINGS/STRUCTURES:
-- building_type: Commercial, residential, industrial
-- construction_materials: Concrete, steel, brick, etc.
-- stories_height: Number of floors, estimated height
-- exterior_condition: Walls, roof, windows
-- surrounding_area: Parking, landscaping, adjacent properties
-
-FOR CONSTRUCTION/INDUSTRIAL:
-- equipment_machinery: Types and quantities
-- materials_storage: What's stored and how
-- work_progress: Stage of construction/operation
-- workforce: Number of workers visible
-- safety_compliance: PPE, barriers, signage
-
-FOR INFRASTRUCTURE:
-- infrastructure_type: Road, bridge, utility, etc.
-- condition_rating: Excellent/Good/Fair/Poor
-- traffic_usage: Volume, type of vehicles
-- maintenance_needs: Repairs required
-- utilities_present: Power lines, pipes, cables
-
-Return a JSON with this structure:
+Return JSON with EXACTLY this structure:
 {
   "scene_type": "type from list above",
-  "scene_overview": "comprehensive paragraph description",
+  "scene_overview": "Comprehensive 2-3 paragraph summary describing the entire scene, its purpose, condition, spatial layout, and all notable features. Be specific about counts, materials, colors, and conditions.",
   "simplified_data": [
     {
-      "identifier": "Category like People/Temperature/Furniture/Lighting/etc",
-      "details": "Concise description - for People: '9 total', for Temperature: '21-24°C (Central HVAC)', for Furniture: 'Couch, chair, coffee table, console', etc",
-      "estimated_cost": "Cost range like '₹80K - ₹1.4L' or '—' if not applicable"
+      "category": "People",
+      "object": "9 Individuals",
+      "details": "Mix of men and women in business casual attire, engaged in various activities - 3 standing in discussion, 4 seated at desks working, 2 walking",
+      "position": "Throughout the office space",
+      "estimated_cost": "—"
+    },
+    {
+      "category": "Furniture",
+      "object": "1 Desk",
+      "details": "Modern white laminate desk with metal legs, approximately 5ft x 3ft",
+      "position": "Center of room",
+      "estimated_cost": "₹15,000"
+    },
+    {
+      "category": "Furniture",
+      "object": "3 Office Chairs",
+      "details": "Black ergonomic swivel chairs with armrests and lumbar support",
+      "position": "At desk and nearby workstations",
+      "estimated_cost": "₹24,000"
+    },
+    {
+      "category": "Lighting",
+      "object": "5 Ceiling Lights",
+      "details": "Recessed LED panel lights, 2x2 ft, providing bright white illumination",
+      "position": "Evenly distributed across ceiling",
+      "estimated_cost": "₹25,000"
     }
   ],
-  "narrative_report": "FULL DETAILED NARRATIVE REPORT in markdown format with emoji headers like:\n🧍 **Number of People**: detailed description\n🌡️ **Temperature**: detailed analysis\n🪑 **Furniture**: comprehensive list\netc. This should be the complete analysis suitable for Word document export",
+  "narrative_report": "## Detailed Property Survey Report\n\n### 📍 Scene Overview\n[2-3 detailed paragraphs about the overall scene]\n\n### 🧍 People & Activity\n[Detailed description of all people, their activities, positioning]\n\n### 🪑 Furniture & Equipment\n[All furniture items with materials, conditions, arrangements]\n\n### 💡 Lighting & Electrical\n[Natural and artificial lighting, electrical fixtures]\n\n### 🏗️ Structural Elements\n[Walls, floors, ceilings, doors, windows, architectural features]\n\n### 🌿 Plants & Decor\n[Any plants, artwork, decorative elements]\n\n### ⚡ Infrastructure & Utilities\n[HVAC, cables, pipes, electrical systems]\n\n### 📋 Signage & Markings\n[All signs, labels, markings]\n\n### 🔧 Maintenance Observations\n[Condition assessments, wear, needed repairs]\n\n### ✅ Key Findings & Recommendations\n[Bullet points of important observations and suggestions]",
   "analysis_data": [
     {
       "category": "category name",
@@ -192,8 +189,13 @@ Return a JSON with this structure:
     }
   ],
   "key_observations": [
-    "important observation 1",
-    "important observation 2"
+    "Well-lit modern office space with good natural light",
+    "Mix of collaborative and individual work areas",
+    "HVAC system appears well-maintained",
+    "Some wear on flooring near high-traffic areas",
+    "Adequate emergency exits and safety signage",
+    "Cable management could be improved",
+    "Space appears at 70% occupancy capacity"
   ],
   "estimated_property_value": {
     "min": number or null,
@@ -202,23 +204,22 @@ Return a JSON with this structure:
   }
 }
 
-IMPORTANT for simplified_data:
-- Create SEPARATE rows for each distinct item type
-- ALWAYS include counts in details (e.g., "3 cones, orange plastic" or "5 chairs, wooden")
-- Keep category names generic: "Furniture", "Lighting", "Safety Equipment", "Vehicles", etc.
-- Keep details concise but ALWAYS include quantity if more than 1
-- Use "—" for estimated_cost when not applicable (like for People, Temperature)
-- Format costs as "₹XXK - ₹XXL" or "₹XX - ₹XX per unit/each"
-- Example rows:
-  {"identifier": "People", "details": "9 total", "estimated_cost": "—"}
-  {"identifier": "Temperature", "details": "21-24°C (Central HVAC)", "estimated_cost": "—"}
-  {"identifier": "Traffic Cones", "details": "5 cones, orange plastic", "estimated_cost": "₹500 - ₹1,000 each"}
-  {"identifier": "Furniture", "details": "L-shaped couch, 5-seater", "estimated_cost": "₹55K - ₹85K"}
-  {"identifier": "Furniture", "details": "2 lounge chairs, leather", "estimated_cost": "₹12K - ₹25K each"}
-  {"identifier": "Vehicles", "details": "3 sedans, parked", "estimated_cost": "—"}
-  {"identifier": "Safety Equipment", "details": "10 barriers, metal", "estimated_cost": "₹2K - ₹5K each"}
+CRITICAL INSTRUCTIONS for simplified_data:
+1. ALWAYS include exact counts in the "object" field (e.g., "9 Individuals" not just "Individuals")
+2. Use standard categories: People, Furniture, Lighting, Electronics, Flooring, Ceiling, Walls, Doors, Windows, Plants, Signage, Safety, HVAC, Storage, Infrastructure, Vehicle, Building Element
+3. Include estimated_cost in INR for items where applicable (use "—" if not applicable)
+4. Be specific about positions (e.g., "Center of room", "Left wall", "Near entrance")
+5. Provide detailed descriptions with colors, materials, conditions
+6. List EVERY distinct item - aim for 15-30+ entries for detailed scenes
+7. Count similar items together (e.g., "5 Ceiling Lights" not separate entries for each)
 
-Be specific and practical. Focus on information valuable for surveyors, property managers, and real estate professionals."""
+Examples of proper format:
+- {"category": "People", "object": "3 Pedestrians", "details": "Two women and one man in casual clothing walking together", "position": "Center foreground", "estimated_cost": "—"}
+- {"category": "Furniture", "object": "4 Workstations", "details": "Modular cubicles with grey panels, each with desk surface", "position": "Along north wall", "estimated_cost": "₹120,000"}
+- {"category": "Electronics", "object": "6 Computer Monitors", "details": "24-inch LED displays, Dell brand, mounted on adjustable arms", "position": "On desks throughout", "estimated_cost": "₹90,000"}
+- {"category": "Flooring", "object": "Vinyl Tile Flooring", "details": "Grey commercial-grade vinyl tiles, approximately 500 sq ft, showing some wear", "position": "Entire floor area", "estimated_cost": "₹75,000"}
+
+Be thorough and professional. This analysis will be used for property valuation and facility management."""
 
         try:
             # Call GPT-4o Vision API
@@ -239,8 +240,8 @@ Be specific and practical. Focus on information valuable for surveyors, property
                         ]
                     }
                 ],
-                max_tokens=4000,
-                temperature=0.2,  # Even lower for more consistency
+                max_tokens=8000,  # Increased for more detailed responses
+                temperature=0.3,  # Slightly higher for more comprehensive descriptions
                 response_format={"type": "json_object"},
                 seed=42  # Fixed seed for reproducibility
             )
@@ -276,8 +277,19 @@ Be specific and practical. Focus on information valuable for surveyors, property
             # Attempt fallback analysis with simplified prompt
             try:
                 return await self._fallback_analysis(image_path, start_time)
-            except:
+            except Exception as fallback_error:
+                print(f"Fallback analysis also failed: {fallback_error}")
+                # Return a basic structure even on failure
                 return {
+                    "scene_type": "unknown",
+                    "scene_overview": "Unable to analyze image. Please ensure the image is clear and try again.",
+                    "simplified_data": [
+                        {
+                            "identifier": "Analysis Status",
+                            "details": "Failed to process - please retry with a clearer image",
+                            "estimated_cost": "—"
+                        }
+                    ],
                     "error": str(e),
                     "processing_time_seconds": time.time() - start_time
                 }

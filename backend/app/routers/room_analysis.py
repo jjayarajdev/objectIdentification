@@ -11,14 +11,16 @@ import io
 import json
 
 from app.config import settings
-from app.services.room_intelligence import RoomIntelligenceService
+from app.services.scene_analyzer import SceneAnalyzer
+from app.services.dspy_scene_analyzer import DSPySceneAnalysisService
 from app.services.report_generator import ReportGenerator
 from app.services.storage import StorageService
 
 router = APIRouter()
 
 # Initialize services
-room_intelligence = RoomIntelligenceService()
+scene_analyzer = SceneAnalyzer()
+dspy_scene_analyzer = DSPySceneAnalysisService()  # New DSPy-based analyzer
 report_generator = ReportGenerator()
 storage_service = StorageService()
 
@@ -26,7 +28,8 @@ storage_service = StorageService()
 @router.post("/analyze-room")
 async def analyze_room(
     file: UploadFile = File(...),
-    generate_report: bool = True
+    generate_report: bool = True,
+    use_dspy: bool = True
 ):
     """
     Perform comprehensive room analysis
@@ -34,6 +37,7 @@ async def analyze_room(
     Args:
         file: Image file to analyze
         generate_report: Whether to generate Word report
+        use_dspy: Whether to use DSPy-based analysis for consistent prompting (default: True)
 
     Returns:
         Comprehensive room analysis with optional report download
@@ -55,18 +59,18 @@ async def analyze_room(
             file_ext
         )
 
-        # Perform room analysis
-        print(f"Starting room intelligence analysis for {saved_path}")
-        analysis = await room_intelligence.analyze_room(saved_path)
+        # Perform scene analysis using selected analyzer
+        if use_dspy:
+            print(f"Starting DSPy-based scene analysis for {saved_path}")
+            analysis = await dspy_scene_analyzer.analyze_scene(saved_path)
+        else:
+            print(f"Starting traditional scene analysis for {saved_path}")
+            analysis = await scene_analyzer.analyze_scene(saved_path)
 
         # Add image metadata
         analysis["image_id"] = image_id
         analysis["filename"] = file.filename
         analysis["image_url"] = f"/uploads/{image_id}{file_ext}"
-
-        # Format analysis for display
-        formatted_report = room_intelligence.format_analysis_for_display(analysis)
-        analysis["formatted_report"] = formatted_report
 
         # Generate Word report if requested
         if generate_report and "error" not in analysis:
@@ -201,8 +205,8 @@ async def analyze_batch_rooms(
                 file_ext
             )
 
-            # Analyze room
-            analysis = await room_intelligence.analyze_room(saved_path)
+            # Analyze scene using DSPy by default
+            analysis = await dspy_scene_analyzer.analyze_scene(saved_path)
 
             # Add metadata
             analysis["image_id"] = image_id
@@ -241,7 +245,7 @@ async def get_cost_database():
     Returns:
         Cost database with all categories and price ranges
     """
-    return JSONResponse(content=room_intelligence.cost_database)
+    return JSONResponse(content={})
 
 
 @router.post("/custom-analysis")
@@ -279,8 +283,8 @@ async def custom_room_analysis(
             file_ext
         )
 
-        # Perform analysis with custom parameters
-        analysis = await room_intelligence.analyze_room(saved_path)
+        # Perform analysis with custom parameters using DSPy
+        analysis = await dspy_scene_analyzer.analyze_scene(saved_path)
 
         # Filter results based on parameters if needed
         if "categories" in params:
