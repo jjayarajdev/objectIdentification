@@ -6,6 +6,7 @@ import CostTracker from './components/CostTracker';
 import ObjectsTable from './components/ObjectsTable';
 import SceneAnalysis from './components/SceneAnalysis';
 import SurveyorDashboard from './components/SurveyorDashboard';
+import ProfessionalDashboard from './components/ProfessionalDashboard';
 import { Camera, Download, FileJson, FileText, FileSpreadsheet, Loader, ChevronRight, ChevronLeft, Info, Smartphone } from 'lucide-react';
 import { uploadSingleImage, uploadBatchImages, getImageExif, exportResults, downloadRoomReport } from './api/api';
 
@@ -160,10 +161,8 @@ function App() {
     setError(null);
   };
 
-  // Show surveyor dashboard for better UX
-  if (interfaceMode === 'surveyor') {
-    return <SurveyorDashboard />;
-  }
+  // Show professional dashboard by default
+  return <ProfessionalDashboard />;
 
   return (
     <div className="min-h-screen bg-gray-100">

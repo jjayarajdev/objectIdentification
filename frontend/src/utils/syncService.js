@@ -4,6 +4,9 @@
 
 import offlineStorage from './offlineStorage';
 
+// Backend API base URL
+const API_BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:8000';
+
 class SyncService {
   constructor() {
     this.syncInterval = 30000; // 30 seconds
@@ -11,6 +14,7 @@ class SyncService {
     this.syncTimer = null;
     this.onlineStatus = navigator.onLine;
     this.listeners = new Set();
+    this.apiBaseUrl = API_BASE_URL;
     this.init();
   }
 
@@ -180,7 +184,7 @@ class SyncService {
     formData.append('metadata', JSON.stringify(image.metadata));
     formData.append('offlineId', image.id);
 
-    const response = await fetch('/api/sync/image', {
+    const response = await fetch(`${this.apiBaseUrl}/api/sync/image`, {
       method: 'POST',
       body: formData
     });
@@ -193,7 +197,7 @@ class SyncService {
   }
 
   async syncAnalysis(analysis) {
-    const response = await fetch('/api/sync/analysis', {
+    const response = await fetch(`${this.apiBaseUrl}/api/sync/analysis`, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json'
@@ -212,7 +216,7 @@ class SyncService {
   }
 
   async syncProject(project) {
-    const response = await fetch('/api/sync/project', {
+    const response = await fetch(`${this.apiBaseUrl}/api/sync/project`, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json'
@@ -231,7 +235,7 @@ class SyncService {
   }
 
   async processQueueItem(item) {
-    const endpoint = `/api/sync/${item.type}`;
+    const endpoint = `${this.apiBaseUrl}/api/sync/${item.type}`;
     const method = item.action === 'delete' ? 'DELETE' : 'POST';
 
     const response = await fetch(endpoint, {

@@ -3,8 +3,10 @@
  */
 
 import * as XLSX from 'xlsx';
-import jsPDF from 'jspdf';
-import 'jspdf-autotable';
+import { jsPDF } from 'jspdf';
+import autoTable from 'jspdf-autotable';
+import { Document, Packer, Paragraph, TextRun, Table, TableCell, TableRow, HeadingLevel, AlignmentType, WidthType, BorderStyle, ImageRun } from 'docx';
+import { saveAs } from 'file-saver';
 
 class ExportService {
   /**
@@ -458,32 +460,308 @@ class ExportService {
   }
 
   /**
-   * Export single analysis to Word-compatible format (via backend)
+   * Export analysis data to Word document format (client-side)
    */
-  async exportToWord(analysisData, imageId) {
+  async exportToWord(data, projectInfo = {}) {
+    if (!data || data.length === 0) {
+      console.error('No data to export');
+      return;
+    }
+
+    console.log('Word Export - Raw data:', data);
+
     try {
-      const response = await fetch('/api/room-analysis/generate-scene-report', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json'
-        },
-        body: JSON.stringify(analysisData)
+      const sections = [];
+
+      // Add title and project info
+      const titleParagraphs = [
+        new Paragraph({
+          text: 'Property Survey Report',
+          heading: HeadingLevel.HEADING_1,
+          alignment: AlignmentType.CENTER,
+          spacing: { after: 300 }
+        }),
+        new Paragraph({
+          children: [
+            new TextRun({ text: 'Project: ', bold: true }),
+            new TextRun(projectInfo.name || 'Survey Report')
+          ],
+          spacing: { after: 200 }
+        }),
+        new Paragraph({
+          children: [
+            new TextRun({ text: 'Date: ', bold: true }),
+            new TextRun(new Date().toLocaleDateString())
+          ],
+          spacing: { after: 200 }
+        }),
+        new Paragraph({
+          children: [
+            new TextRun({ text: 'Total Images Analyzed: ', bold: true }),
+            new TextRun(data.length.toString())
+          ],
+          spacing: { after: 200 }
+        })
+      ];
+
+      if (projectInfo.client) {
+        titleParagraphs.push(
+          new Paragraph({
+            children: [
+              new TextRun({ text: 'Client: ', bold: true }),
+              new TextRun(projectInfo.client)
+            ],
+            spacing: { after: 400 }
+          })
+        );
+      }
+
+      const documentChildren = [...titleParagraphs];
+
+      // Process each analysis
+      for (let index = 0; index < data.length; index++) {
+        const analysis = data[index];
+
+        // Image header
+        documentChildren.push(
+          new Paragraph({
+            text: `Image ${index + 1}: ${analysis.fileName || analysis.filename || 'Unnamed'}`,
+            heading: HeadingLevel.HEADING_2,
+            spacing: { before: 400, after: 200 }
+          })
+        );
+
+        // Add the image if available
+        if (analysis.imageFile) {
+          try {
+            const imageBuffer = await analysis.imageFile.arrayBuffer();
+            documentChildren.push(
+              new Paragraph({
+                children: [
+                  new ImageRun({
+                    data: imageBuffer,
+                    transformation: {
+                      width: 600,
+                      height: 400
+                    }
+                  })
+                ],
+                spacing: { after: 300 }
+              })
+            );
+          } catch (err) {
+            console.error('Error adding image to Word document:', err);
+          }
+        }
+
+        // Basic info
+        documentChildren.push(
+          new Paragraph({
+            children: [
+              new TextRun({ text: 'Scene Type: ', bold: true }),
+              new TextRun(analysis.scene_type || analysis.sceneType || 'Unknown')
+            ],
+            spacing: { after: 100 }
+          })
+        );
+
+        if (analysis.timestamp || analysis.analysis_timestamp) {
+          documentChildren.push(
+            new Paragraph({
+              children: [
+                new TextRun({ text: 'Timestamp: ', bold: true }),
+                new TextRun(analysis.timestamp || analysis.analysis_timestamp)
+              ],
+              spacing: { after: 100 }
+            })
+          );
+        }
+
+        if (analysis.location) {
+          documentChildren.push(
+            new Paragraph({
+              children: [
+                new TextRun({ text: 'Location: ', bold: true }),
+                new TextRun(`${analysis.location.lat}, ${analysis.location.lng}`)
+              ],
+              spacing: { after: 200 }
+            })
+          );
+        }
+
+        // Scene Overview
+        const overview = analysis.scene_overview || analysis.sceneOverview;
+        if (overview) {
+          documentChildren.push(
+            new Paragraph({
+              text: 'Overview',
+              heading: HeadingLevel.HEADING_3,
+              spacing: { before: 200, after: 100 }
+            })
+          );
+          documentChildren.push(
+            new Paragraph({
+              text: overview,
+              spacing: { after: 200 }
+            })
+          );
+        }
+
+        // Narrative Report
+        const narrativeReport = analysis.narrative_report || analysis.narrativeReport;
+        if (narrativeReport) {
+          documentChildren.push(
+            new Paragraph({
+              text: 'Detailed Analysis',
+              heading: HeadingLevel.HEADING_3,
+              spacing: { before: 200, after: 100 }
+            })
+          );
+
+          // Split by lines and process
+          const lines = narrativeReport.split('\n');
+          lines.forEach(line => {
+            const cleanLine = line.trim();
+            if (cleanLine) {
+              // Check if it's a heading (contains **)
+              if (cleanLine.includes('**')) {
+                const text = cleanLine.replace(/\*\*/g, '').replace(/[^\x00-\x7F]/g, '');
+                documentChildren.push(
+                  new Paragraph({
+                    children: [new TextRun({ text: text.trim(), bold: true })],
+                    spacing: { before: 150, after: 100 }
+                  })
+                );
+              } else {
+                documentChildren.push(
+                  new Paragraph({
+                    text: cleanLine,
+                    spacing: { after: 100 }
+                  })
+                );
+              }
+            }
+          });
+        }
+
+        // Items Table
+        const itemsData = analysis.simplified_data || analysis.simplifiedData;
+        if (itemsData && itemsData.length > 0) {
+          documentChildren.push(
+            new Paragraph({
+              text: 'Detected Items & Features',
+              heading: HeadingLevel.HEADING_3,
+              spacing: { before: 300, after: 200 }
+            })
+          );
+
+          // Create table
+          const tableRows = [
+            // Header row
+            new TableRow({
+              children: [
+                new TableCell({
+                  children: [new Paragraph({ text: '#', bold: true })],
+                  width: { size: 10, type: WidthType.PERCENTAGE }
+                }),
+                new TableCell({
+                  children: [new Paragraph({ text: 'Category', bold: true })],
+                  width: { size: 20, type: WidthType.PERCENTAGE }
+                }),
+                new TableCell({
+                  children: [new Paragraph({ text: 'Details', bold: true })],
+                  width: { size: 50, type: WidthType.PERCENTAGE }
+                }),
+                new TableCell({
+                  children: [new Paragraph({ text: 'Est. Cost', bold: true })],
+                  width: { size: 20, type: WidthType.PERCENTAGE }
+                })
+              ]
+            })
+          ];
+
+          // Data rows
+          itemsData.forEach((item, idx) => {
+            tableRows.push(
+              new TableRow({
+                children: [
+                  new TableCell({
+                    children: [new Paragraph((idx + 1).toString())],
+                    width: { size: 10, type: WidthType.PERCENTAGE }
+                  }),
+                  new TableCell({
+                    children: [new Paragraph(item.identifier || item.category || 'Item')],
+                    width: { size: 20, type: WidthType.PERCENTAGE }
+                  }),
+                  new TableCell({
+                    children: [new Paragraph(item.details || item.description || '')],
+                    width: { size: 50, type: WidthType.PERCENTAGE }
+                  }),
+                  new TableCell({
+                    children: [new Paragraph(item.estimated_cost || item.cost || '—')],
+                    width: { size: 20, type: WidthType.PERCENTAGE }
+                  })
+                ]
+              })
+            );
+          });
+
+          documentChildren.push(
+            new Table({
+              rows: tableRows,
+              width: { size: 100, type: WidthType.PERCENTAGE }
+            })
+          );
+        }
+
+        // Key Observations
+        const observations = analysis.key_observations || analysis.keyObservations;
+        if (observations && observations.length > 0) {
+          documentChildren.push(
+            new Paragraph({
+              text: 'Key Observations',
+              heading: HeadingLevel.HEADING_3,
+              spacing: { before: 300, after: 200 }
+            })
+          );
+
+          observations.forEach(obs => {
+            documentChildren.push(
+              new Paragraph({
+                text: `• ${obs}`,
+                spacing: { after: 100 }
+              })
+            );
+          });
+        }
+
+        // Add page break between images (except last one)
+        if (index < data.length - 1) {
+          documentChildren.push(
+            new Paragraph({
+              text: '',
+              pageBreakBefore: true
+            })
+          );
+        }
+      }
+
+      // Create document
+      const doc = new Document({
+        sections: [{
+          properties: {},
+          children: documentChildren
+        }]
       });
 
-      if (!response.ok) {
-        throw new Error('Failed to generate Word report');
-      }
+      // Generate and download
+      const blob = await Packer.toBlob(doc);
+      const filename = `${projectInfo.name || 'survey_report'}_${new Date().toISOString().split('T')[0]}.docx`;
+      saveAs(blob, filename);
 
-      const result = await response.json();
-
-      if (result.success && result.report_url) {
-        // Download the generated Word document
-        window.open(`http://localhost:8000${result.report_url}`, '_blank');
-      }
-
-      return result;
+      console.log('Word document generated successfully');
     } catch (error) {
-      console.error('Error generating Word report:', error);
+      console.error('Error generating Word document:', error);
       throw error;
     }
   }

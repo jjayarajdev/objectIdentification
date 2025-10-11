@@ -126,14 +126,19 @@ const SurveyorDashboard = () => {
 
       try {
         if (isOnline && !offlineMode) {
-          // Online processing
+          // Online processing with timeout
           const formData = new FormData();
           formData.append('file', file);
 
+          // Create abort controller for timeout (5 minutes for comprehensive DSPy analysis)
+          const controller = new AbortController();
+          const timeoutId = setTimeout(() => controller.abort(), 300000); // 5 minutes
+
           const response = await fetch('http://localhost:8000/api/room-analysis/analyze-room', {
             method: 'POST',
-            body: formData
-          });
+            body: formData,
+            signal: controller.signal
+          }).finally(() => clearTimeout(timeoutId));
 
           if (response.ok) {
             const result = await response.json();
@@ -151,6 +156,8 @@ const SurveyorDashboard = () => {
               narrativeReport: result.narrative_report,
               keyObservations: result.key_observations
             });
+          } else {
+            console.error(`Failed to analyze ${file.name}: ${response.status} ${response.statusText}`);
           }
         } else {
           // Offline processing - save locally
@@ -721,27 +728,22 @@ const SurveyorDashboard = () => {
                           </div>
                           <div className="flex gap-2">
                             <button
-                              onClick={() => {
-                                const currentResult = analysisResults[selectedAnalysisIndex];
-                                exportService.exportToPDF([currentResult], {
-                                  name: currentResult.fileName || 'Analysis',
-                                  client: 'CBRE'
-                                });
+                              onClick={async () => {
+                                try {
+                                  const currentResult = analysisResults[selectedAnalysisIndex];
+                                  await exportService.exportToWord([currentResult], {
+                                    name: currentResult.fileName || 'Analysis',
+                                    client: 'CBRE'
+                                  });
+                                } catch (error) {
+                                  console.error('Export failed:', error);
+                                  alert(`Failed to export: ${error.message}`);
+                                }
                               }}
                               className="px-3 py-1 text-sm bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors flex items-center gap-1"
                             >
                               <Download className="w-3 h-3" />
-                              PDF
-                            </button>
-                            <button
-                              onClick={() => {
-                                const currentResult = analysisResults[selectedAnalysisIndex];
-                                exportService.exportToExcel([currentResult], currentResult.fileName);
-                              }}
-                              className="px-3 py-1 text-sm bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors flex items-center gap-1"
-                            >
-                              <Download className="w-3 h-3" />
-                              Excel
+                              Download as Word Document
                             </button>
                             <button
                               onClick={() => {

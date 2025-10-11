@@ -1,11 +1,23 @@
-import React from 'react';
-import { MapPin, FileText, Download, Calendar, Clock, Building, DollarSign, AlertCircle, Package } from 'lucide-react';
+import React, { useState, useEffect } from 'react';
+import { MapPin, FileText, Download, Calendar, Clock, Building, DollarSign, AlertCircle, Package, Edit3, Save, X, Plus, Trash2 } from 'lucide-react';
+import exportService from '../utils/exportService';
 
 const AnalysisDisplay = ({ analysis }) => {
   if (!analysis) return null;
 
   // Parse the analysis data if it's a string
   const data = typeof analysis === 'string' ? JSON.parse(analysis) : analysis;
+
+  // State for editable table data
+  const [tableData, setTableData] = useState([]);
+  const [editingId, setEditingId] = useState(null);
+  const [editValues, setEditValues] = useState({});
+
+  // Initialize table data when analysis changes
+  useEffect(() => {
+    const initialData = parseDetectedItems(data.simplified_data);
+    setTableData(initialData);
+  }, [data.simplified_data]);
 
   // Format currency
   const formatCurrency = (amount) => {
@@ -155,6 +167,61 @@ const AnalysisDisplay = ({ analysis }) => {
     return '';
   };
 
+  // Helper functions for table editing
+  const handleEditClick = (item) => {
+    setEditingId(item.number);
+    setEditValues({
+      category: item.category,
+      object: item.object,
+      description: item.description,
+      position: item.position || ''
+    });
+  };
+
+  const handleSaveEdit = (itemNumber) => {
+    setTableData(prev => prev.map(item =>
+      item.number === itemNumber
+        ? { ...item, ...editValues }
+        : item
+    ));
+    setEditingId(null);
+    setEditValues({});
+  };
+
+  const handleCancelEdit = () => {
+    setEditingId(null);
+    setEditValues({});
+  };
+
+  const handleAddRow = () => {
+    const maxNumber = Math.max(...tableData.map(item => item.number), 0);
+    const newRow = {
+      number: maxNumber + 1,
+      category: 'General',
+      object: 'New Item',
+      description: 'Enter description',
+      position: 'Enter position'
+    };
+    setTableData(prev => [...prev, newRow]);
+    handleEditClick(newRow);
+  };
+
+  const handleRemoveRow = (itemNumber) => {
+    setTableData(prev => {
+      const filtered = prev.filter(item => item.number !== itemNumber);
+      // Renumber items to maintain sequential numbering
+      return filtered.map((item, index) => ({ ...item, number: index + 1 }));
+    });
+    if (editingId === itemNumber) {
+      setEditingId(null);
+      setEditValues({});
+    }
+  };
+
+  const handleInputChange = (field, value) => {
+    setEditValues(prev => ({ ...prev, [field]: value }));
+  };
+
   return (
     <div className="space-y-6 p-4">
       {/* Header with Image Info */}
@@ -168,11 +235,48 @@ const AnalysisDisplay = ({ analysis }) => {
           </div>
         </div>
         <div className="flex gap-2">
-          <button className="px-3 py-1 text-sm bg-blue-50 text-blue-600 rounded hover:bg-blue-100">
-            PDF
-          </button>
-          <button className="px-3 py-1 text-sm bg-green-50 text-green-600 rounded hover:bg-green-100">
-            Excel
+          <button
+            onClick={async () => {
+              try {
+                console.log('Attempting Word export with data:', data);
+
+                // Ensure data is in the correct format for export
+                const exportData = [{
+                  fileName: data.filename || data.fileName || 'Analysis',
+                  filename: data.filename || data.fileName || 'Analysis',
+                  timestamp: data.timestamp || data.analysis_timestamp || new Date().toISOString(),
+                  scene_type: data.scene_type || data.sceneType,
+                  sceneType: data.scene_type || data.sceneType,
+                  scene_overview: data.scene_overview || data.sceneOverview,
+                  sceneOverview: data.scene_overview || data.sceneOverview,
+                  simplified_data: data.simplified_data || data.simplifiedData,
+                  simplifiedData: data.simplified_data || data.simplifiedData,
+                  narrative_report: data.narrative_report || data.narrativeReport,
+                  narrativeReport: data.narrative_report || data.narrativeReport,
+                  key_observations: data.key_observations || data.keyObservations,
+                  keyObservations: data.key_observations || data.keyObservations,
+                  location: data.location,
+                  imageFile: data.imageFile // Include the image file if available
+                }];
+
+                console.log('Formatted export data:', exportData);
+
+                await exportService.exportToWord(exportData, {
+                  name: data.filename || data.fileName || 'Analysis',
+                  client: 'CBRE'
+                });
+
+                console.log('Word export completed successfully');
+              } catch (error) {
+                console.error('Export failed:', error);
+                console.error('Error stack:', error.stack);
+                alert(`Failed to export to Word: ${error.message}`);
+              }
+            }}
+            className="px-3 py-1 text-sm bg-blue-600 text-white rounded hover:bg-blue-700 flex items-center gap-1"
+          >
+            <Download className="w-3 h-3" />
+            Download as Word Document
           </button>
         </div>
       </div>
@@ -218,8 +322,15 @@ const AnalysisDisplay = ({ analysis }) => {
       {/* Detected Items & Features */}
       {data.simplified_data && (
         <div className="bg-white border rounded-lg overflow-hidden">
-          <div className="bg-gray-50 px-4 py-3 border-b">
+          <div className="bg-gray-50 px-4 py-3 border-b flex justify-between items-center">
             <h4 className="font-medium text-gray-900">Detected Items & Features</h4>
+            <button
+              onClick={handleAddRow}
+              className="px-3 py-1 text-sm bg-green-50 text-green-600 rounded hover:bg-green-100 flex items-center gap-1"
+            >
+              <Plus className="w-4 h-4" />
+              Add Row
+            </button>
           </div>
           <div className="overflow-x-auto">
             <table className="w-full">
@@ -237,28 +348,117 @@ const AnalysisDisplay = ({ analysis }) => {
                   <th className="px-4 py-3 text-left text-xs font-bold text-gray-600 uppercase tracking-wider border-r">
                     Description
                   </th>
-                  <th className="px-4 py-3 text-left text-xs font-bold text-gray-600 uppercase tracking-wider">
+                  <th className="px-4 py-3 text-left text-xs font-bold text-gray-600 uppercase tracking-wider border-r">
                     Position in Image
+                  </th>
+                  <th className="px-4 py-3 text-center text-xs font-bold text-gray-600 uppercase tracking-wider">
+                    Actions
                   </th>
                 </tr>
               </thead>
               <tbody className="bg-white divide-y divide-gray-200">
-                {parseDetectedItems(data.simplified_data).map((item) => (
-                  <tr key={item.number} className="hover:bg-gray-50">
+                {tableData.map((item) => (
+                  <tr key={item.number} className={`hover:bg-gray-50 ${editingId === item.number ? 'bg-blue-50' : ''}`}>
                     <td className="px-3 py-3 text-sm text-center text-gray-700 font-medium border-r">
                       {item.number}
                     </td>
                     <td className="px-4 py-3 text-sm font-semibold text-gray-900 border-r">
-                      {item.category.charAt(0).toUpperCase() + item.category.slice(1)}
+                      {editingId === item.number ? (
+                        <select
+                          value={editValues.category || ''}
+                          onChange={(e) => handleInputChange('category', e.target.value)}
+                          className="w-full px-2 py-1 border rounded text-sm"
+                        >
+                          <option value="General">General</option>
+                          <option value="People">People</option>
+                          <option value="Furniture">Furniture</option>
+                          <option value="Vehicle">Vehicle</option>
+                          <option value="Plants">Plants</option>
+                          <option value="Lighting">Lighting</option>
+                          <option value="Traffic Control">Traffic Control</option>
+                          <option value="Building Element">Building Element</option>
+                          <option value="Infrastructure">Infrastructure</option>
+                          <option value="Signage">Signage</option>
+                          <option value="Pavement">Pavement</option>
+                          <option value="Safety">Safety</option>
+                          <option value="Equipment">Equipment</option>
+                        </select>
+                      ) : (
+                        item.category.charAt(0).toUpperCase() + item.category.slice(1)
+                      )}
                     </td>
                     <td className="px-4 py-3 text-sm text-gray-800 border-r">
-                      {item.object}
+                      {editingId === item.number ? (
+                        <input
+                          type="text"
+                          value={editValues.object || ''}
+                          onChange={(e) => handleInputChange('object', e.target.value)}
+                          className="w-full px-2 py-1 border rounded text-sm"
+                        />
+                      ) : (
+                        item.object
+                      )}
                     </td>
                     <td className="px-4 py-3 text-sm text-gray-600 border-r">
-                      {item.description}
+                      {editingId === item.number ? (
+                        <textarea
+                          value={editValues.description || ''}
+                          onChange={(e) => handleInputChange('description', e.target.value)}
+                          className="w-full px-2 py-1 border rounded text-sm resize-none"
+                          rows="2"
+                        />
+                      ) : (
+                        item.description
+                      )}
                     </td>
-                    <td className="px-4 py-3 text-sm text-gray-600">
-                      {item.position || '—'}
+                    <td className="px-4 py-3 text-sm text-gray-600 border-r">
+                      {editingId === item.number ? (
+                        <input
+                          type="text"
+                          value={editValues.position || ''}
+                          onChange={(e) => handleInputChange('position', e.target.value)}
+                          className="w-full px-2 py-1 border rounded text-sm"
+                        />
+                      ) : (
+                        item.position || '—'
+                      )}
+                    </td>
+                    <td className="px-4 py-3 text-sm text-center">
+                      {editingId === item.number ? (
+                        <div className="flex items-center justify-center gap-2">
+                          <button
+                            onClick={() => handleSaveEdit(item.number)}
+                            className="p-1 text-green-600 hover:bg-green-100 rounded"
+                            title="Save changes"
+                          >
+                            <Save className="w-4 h-4" />
+                          </button>
+                          <button
+                            onClick={handleCancelEdit}
+                            className="p-1 text-red-600 hover:bg-red-100 rounded"
+                            title="Cancel editing"
+                          >
+                            <X className="w-4 h-4" />
+                          </button>
+                        </div>
+                      ) : (
+                        <div className="flex items-center justify-center gap-2">
+                          <button
+                            onClick={() => handleEditClick(item)}
+                            className="p-1 text-blue-600 hover:bg-blue-100 rounded"
+                            title="Edit row"
+                          >
+                            <Edit3 className="w-4 h-4" />
+                          </button>
+                          <button
+                            onClick={() => handleRemoveRow(item.number)}
+                            className="p-1 text-red-600 hover:bg-red-100 rounded"
+                            title="Delete row"
+                          >
+                            <Trash2 className="w-4 h-4" />
+                          </button>
+                        </div>
+                      )}
                     </td>
                   </tr>
                 ))}
