@@ -7,6 +7,7 @@ import ObjectsTable from './components/ObjectsTable';
 import SceneAnalysis from './components/SceneAnalysis';
 import SurveyorDashboard from './components/SurveyorDashboard';
 import ProfessionalDashboard from './components/ProfessionalDashboard';
+import ModernDarkDashboard from './components/ModernDarkDashboard';
 import { Camera, Download, FileJson, FileText, FileSpreadsheet, Loader, ChevronRight, ChevronLeft, Info, Smartphone } from 'lucide-react';
 import { uploadSingleImage, uploadBatchImages, getImageExif, exportResults, downloadRoomReport } from './api/api';
 
@@ -161,8 +162,8 @@ function App() {
     setError(null);
   };
 
-  // Show professional dashboard by default
-  return <ProfessionalDashboard />;
+  // Show modern dark dashboard by default
+  return <ModernDarkDashboard />;
 
   return (
     <div className="min-h-screen bg-gray-100">

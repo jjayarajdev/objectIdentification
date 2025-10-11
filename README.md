@@ -1,276 +1,337 @@
-# Object Detection Web Application
+# CBRE Property Analysis - AI-Powered Scene Recognition
 
-An advanced web application for object detection using OpenAI's GPT-4o Vision API with comprehensive image analysis, bounding box visualization, and metadata extraction.
+A professional web application for property analysis using AI-powered scene recognition, GPS mapping, and comprehensive property assessment with automated report generation.
 
-## Features
+![Version](https://img.shields.io/badge/version-2.0-blue)
+![License](https://img.shields.io/badge/license-MIT-green)
+![React](https://img.shields.io/badge/React-19.1-blue)
+![FastAPI](https://img.shields.io/badge/FastAPI-0.109-green)
 
-### Core Functionality
-- **AI-Powered Object Detection**: Uses GPT-4o Vision API to detect and identify objects in images
-- **Precise Bounding Boxes**: Visual overlay showing detected objects with colored bounding boxes
-- **Individual Instance Detection**: Detects and counts multiple instances of the same object type (e.g., multiple chairs, tables)
-- **Confidence Scores**: Shows detection confidence for each identified object
+## 🎯 Overview
 
-### Image Processing
-- **Single & Batch Upload**: Support for individual images or multiple images at once
-- **Drag & Drop Interface**: Intuitive file upload with preview
-- **Gallery View**: Navigate through multiple processed images with thumbnails
-- **EXIF Metadata Extraction**: Extracts camera settings, GPS location, and other metadata
+CBRE Property Analysis is a modern, desktop-optimized web application designed for property surveyors and real estate professionals. It combines AI-powered scene recognition, GPS location mapping, and automated report generation to streamline property assessment workflows.
 
-### Data Management
-- **Multiple Export Formats**:
-  - JSON (complete data structure)
-  - YOLO format (for training models)
-  - COCO dataset format
-  - CSV (tabular data)
-- **Filtering & Sorting**: Advanced table with search, category filters, and sorting options
-- **Cost Tracking**: Real-time token usage and cost estimation ($0.0025/1K input, $0.01/1K output)
+## ✨ Key Features
 
-### User Interface
-- **Responsive Design**: Works on desktop, tablet, and mobile devices
-- **Interactive Visualizations**:
-  - Zoom in/out on images
-  - Toggle bounding boxes on/off
-  - Hover effects for object details
-- **Collapsible Sidebar**: Hide/show metadata and token usage information
-- **Real-time Badges**: Display token usage, cost, and EXIF data overlaid on images
+### 🏢 Property Analysis
+- **AI Scene Recognition**: Automatically identifies property types (industrial, office, residential, etc.)
+- **Comprehensive Analysis**: Detailed reports on infrastructure, facilities, and features
+- **GPS Location Mapping**: Extract and display property location from EXIF data
+- **Cost Estimation**: Estimated costs for detected items and features
+- **Key Observations**: Automatically generated insights about the property
 
-## Tech Stack
+### 📸 Image Processing
+- **Batch Upload**: Process up to 50 images at once
+- **Drag & Drop**: Intuitive file upload interface
+- **EXIF Metadata**: Extract camera settings, GPS coordinates, and timestamps
+- **Image Gallery**: Horizontal carousel for easy navigation
+
+### 📊 Data Management
+- **Editable Tables**: In-line editing of detected items and features
+- **Export to Word**: Professional report generation with embedded images
+- **Batch Export**: Generate comprehensive reports for multiple properties
+- **Customizable Data**: Add, edit, or remove detected items
+
+### 🎨 Modern UI
+- **Dark Theme**: Professional dark mode design inspired by v0.app
+- **Teal Accents**: Clean, modern color scheme (#14b8a6)
+- **Responsive Layout**: Optimized for desktop and widescreen displays
+- **Three-Column View**: Image | Map | Overview for efficient information display
+- **Collapsible Sections**: Expand/collapse analysis sections as needed
+
+## 🖥️ User Interface
+
+### Upload Screen
+- Large drag-and-drop zone with hover effects
+- Grid preview of selected images (6-column layout)
+- Feature showcase cards
+- Progress indicators during analysis
+
+### Analysis Display
+- **Horizontal Image Carousel**: Quick navigation between analyzed properties
+- **Property Image**: Full-size display with EXIF data viewer
+- **GPS Map**: Dark-themed Google Maps integration
+- **Scene Overview**: Scrollable text panel with property context
+- **Data Table**: Editable table with detected items and estimated costs
+- **Key Observations**: Bullet-point list of important findings
+- **Detailed Report**: Full narrative report in modal view
+
+## 🚀 Tech Stack
 
 ### Backend
-- **FastAPI**: Modern, fast web framework for building APIs
-- **Python 3.11+**: Core backend language
-- **OpenAI API**: GPT-4o Vision for object detection
-- **Pillow & exifread**: Image processing and metadata extraction
-- **Pydantic**: Data validation and settings management
-- **uvicorn**: ASGI server
+- **FastAPI**: Modern Python web framework
+- **OpenAI GPT-4o Vision**: AI-powered scene analysis
+- **DSPy**: Structured LLM outputs
+- **SQLite**: Transaction logging
+- **Google Maps API**: Location services
+- **Python 3.11+**
 
 ### Frontend
-- **React 18**: UI framework with hooks
-- **Vite**: Fast build tool and dev server
-- **TypeScript**: Type-safe JavaScript
-- **Tailwind CSS v4**: Utility-first CSS framework
-- **React Dropzone**: File upload handling
+- **React 19**: Latest React with hooks
+- **Vite 7**: Fast build tool
+- **Tailwind CSS 4**: Utility-first CSS
+- **docx**: Word document generation
+- **exifr**: EXIF metadata extraction
 - **Lucide React**: Icon library
 
-## Installation
+## 📦 Installation
 
 ### Prerequisites
-- Python 3.11 or higher
-- Node.js 18 or higher
+- Python 3.11+
+- Node.js 18+
 - OpenAI API key
+- Google Maps API key (optional, for mapping features)
 
-### Backend Setup
+### Quick Start
 
-1. Clone the repository:
+1. **Clone the repository**
 ```bash
-git clone <repository-url>
+git clone https://github.com/jjayarajdev/objectIdentification.git
 cd objectIdentification
 ```
 
-2. Set up Python virtual environment:
+2. **Backend Setup**
 ```bash
 cd backend
 python -m venv venv
-source venv/bin/activate  # On Windows: venv\Scripts\activate
-```
-
-3. Install dependencies:
-```bash
+source venv/bin/activate  # Windows: venv\Scripts\activate
 pip install -r requirements.txt
 ```
 
-4. Create `.env` file in backend directory:
+3. **Configure Environment**
+Create `backend/.env`:
 ```env
 OPENAI_API_KEY=your_openai_api_key_here
+GOOGLE_MAPS_API_KEY=your_google_maps_key_here  # Optional
 ALLOWED_ORIGINS=["http://localhost:5173"]
-MAX_FILE_SIZE_MB=10
-ALLOWED_EXTENSIONS=[".jpg", ".jpeg", ".png", ".gif", ".bmp", ".webp"]
-INPUT_TOKEN_COST=0.0025
-OUTPUT_TOKEN_COST=0.01
 ```
 
-5. Run the backend server:
+4. **Run Backend**
 ```bash
 python run.py
 ```
 
-The API will be available at `http://localhost:8000`
-
-### Frontend Setup
-
-1. Navigate to frontend directory:
+5. **Frontend Setup** (new terminal)
 ```bash
-cd ../frontend
-```
-
-2. Install dependencies:
-```bash
+cd frontend
 npm install
-```
-
-3. Create `.env` file in frontend directory:
-```env
-VITE_API_URL=http://localhost:8000
-```
-
-4. Run the development server:
-```bash
 npm run dev
 ```
 
-The application will be available at `http://localhost:5173`
+6. **Access Application**
+Open http://localhost:5173 in your browser
 
-## Usage
+## 💼 Usage Guide
 
-### Uploading Images
+### Analyzing Properties
 
-1. **Single Upload**: Click "Select Image" or drag and drop one image
-2. **Batch Upload**: Click "Select Images" or drag and drop multiple images (up to 10)
-3. Wait for processing - the AI will detect objects and draw bounding boxes
+1. **Upload Images**
+   - Drag and drop up to 50 images
+   - Or click "Select Images" to browse
+   - Review grid preview before processing
 
-### Viewing Results
+2. **Process Images**
+   - Click "Analyze" button
+   - Watch progress indicator
+   - Results appear in horizontal carousel
 
-- **Bounding Boxes**: Colored boxes around detected objects with labels and confidence scores
-- **Objects Table**: Comprehensive list with filtering and sorting options
-- **Image Analysis**: Detailed AI-generated description of the scene
-- **Metadata**: Camera settings, GPS location (if available), token usage, and cost
+3. **Review Analysis**
+   - Select image from carousel
+   - View property image, map, and overview
+   - Review detected items table
+   - Read key observations
 
-### Interacting with Results
+4. **Edit Data**
+   - Click edit icon on any table row
+   - Modify category, details, or costs
+   - Add new rows with "+ Add Row" button
+   - Delete unwanted entries
 
-- **Zoom**: Use zoom controls to examine details
-- **Toggle Boxes**: Show/hide bounding boxes
-- **Filter Objects**: Search by name or filter by category
-- **Export Data**: Download results in your preferred format
+5. **View Detailed Report**
+   - Click "View Detailed Report" button
+   - Read comprehensive narrative analysis
+   - Download as Word document
 
-### Keyboard Shortcuts
-- `Space`: Toggle bounding boxes
-- `+/-`: Zoom in/out
-- `Arrow keys`: Navigate between images in gallery view
+6. **Export Results**
+   - Single image: Click "Download as Word Document"
+   - All results: Click "Export All to Word" in header
+   - Professional report with embedded images generated
 
-## API Endpoints
+### Understanding Analysis Results
 
-### Main Endpoints
-- `POST /api/v1/upload`: Upload single image
-- `POST /api/v1/upload-batch`: Upload multiple images
-- `GET /api/v1/exif/{image_id}`: Get EXIF metadata
-- `POST /api/v1/export/{format}`: Export detection results
+#### Scene Types
+- `industrial_facility`: Manufacturing, plants, warehouses
+- `indoor_office`: Office spaces, meeting rooms
+- `building_exterior`: Building facades, structures
+- `land_property`: Vacant land, plots
+- `construction_site`: Active construction
+- `infrastructure`: Roads, utilities, bridges
+- `parking_area`: Parking lots, garages
 
-### Documentation
-- API docs: `http://localhost:8000/docs`
-- OpenAPI spec: `http://localhost:8000/openapi.json`
+#### Analysis Sections
+1. **Property Context**: Location, terrain, construction materials
+2. **Infrastructure & Access**: Roads, utilities, access points
+3. **Facilities & Equipment**: Equipment, utilities, special features
+4. **Condition & Observations**: Maintenance, safety, recommendations
 
-## Architecture
+## 🎨 UI Features
 
-### Object Detection Pipeline
-1. Image uploaded to backend
-2. Image encoded to base64
-3. Sent to GPT-4o Vision API with detailed prompt
-4. AI returns detected objects with bounding boxes (x, y, width, height as percentages)
-5. Backend processes response and calculates costs
-6. Frontend renders bounding boxes using SVG overlay
+### Dark Theme
+- Background: `#0a0a0a` (deep black)
+- Cards: `#1a1a1a` (dark gray)
+- Accents: `#14b8a6` (teal)
+- Professional, modern aesthetic
 
-### Bounding Box System
-- Coordinates provided by GPT-4o as percentages (0-100)
-- SVG overlay ensures pixel-perfect alignment
-- Responsive design maintains accuracy at different zoom levels
-- Color-coded by object category
+### Interactive Elements
+- Hover states on all buttons
+- Smooth transitions
+- Custom scrollbars
+- Loading indicators
+- Status badges (success/error)
 
-## Configuration
+### Responsive Design
+- Maximum width: 1400px
+- Horizontal layouts for widescreen
+- Three-column grid system
+- Collapsible sections for smaller screens
 
-### Backend Configuration (`backend/app/config.py`)
-- `MAX_FILE_SIZE_MB`: Maximum file size (default: 10MB)
-- `ALLOWED_EXTENSIONS`: Supported image formats
-- `INPUT_TOKEN_COST`: Cost per 1K input tokens
-- `OUTPUT_TOKEN_COST`: Cost per 1K output tokens
+## 🔧 Configuration
 
-### Frontend Configuration
-- API URL configured via environment variable
-- Tailwind CSS customization in `tailwind.config.js`
+### Backend (app/config.py)
+```python
+MAX_FILE_SIZE_MB = 20
+ALLOWED_EXTENSIONS = [".jpg", ".jpeg", ".png"]
+INPUT_TOKEN_COST = 0.0025
+OUTPUT_TOKEN_COST = 0.01
+```
 
-## Development
+### Frontend
+- Dark theme colors in Tailwind config
+- Custom scrollbar styling
+- Component-level configuration
+
+## 📚 Documentation
+
+- [Architecture](docs/ARCHITECTURE.md) - System design and components
+- [API Documentation](docs/API.md) - Backend API reference
+- [Frontend Guide](docs/FRONTEND.md) - Frontend components and features
+- [Dark Theme UI](frontend/DARK_THEME_UI.md) - UI design specifications
+- [Development Guide](docs/DEVELOPMENT.md) - Development workflow
+
+## 🧪 Development
 
 ### Running Tests
 ```bash
-# Backend tests
+# Backend
 cd backend
 pytest
 
-# Frontend tests
+# Frontend
 cd frontend
 npm test
 ```
 
 ### Building for Production
-
-Backend:
 ```bash
-cd backend
+# Backend
 uvicorn app.main:app --host 0.0.0.0 --port 8000 --workers 4
-```
 
-Frontend:
-```bash
-cd frontend
+# Frontend
 npm run build
 npm run preview
 ```
 
-## Troubleshooting
+## 📊 Project Structure
+
+```
+objectIdentification/
+├── backend/
+│   ├── app/
+│   │   ├── routers/          # API endpoints
+│   │   ├── services/         # Business logic
+│   │   └── main.py          # FastAPI app
+│   ├── requirements.txt
+│   └── run.py
+├── frontend/
+│   ├── src/
+│   │   ├── components/      # React components
+│   │   │   ├── ModernDarkDashboard.jsx  # Main UI
+│   │   │   ├── DarkSceneAnalysis.jsx    # Analysis display
+│   │   │   └── ...
+│   │   ├── utils/           # Helper functions
+│   │   └── App.jsx
+│   ├── package.json
+│   └── vite.config.js
+└── docs/                    # Documentation
+```
+
+## 🎯 Roadmap
+
+- [ ] PDF export support
+- [ ] Image annotations/markup
+- [ ] Comparison view (before/after)
+- [ ] Mobile-optimized layout
+- [ ] Batch processing queue
+- [ ] Cloud storage integration
+- [ ] User authentication
+- [ ] Report templates
+
+## 🐛 Troubleshooting
 
 ### Common Issues
 
-1. **Bounding boxes not showing**
-   - Ensure GPT-4o API is returning coordinates
-   - Check browser console for errors
-   - Verify image dimensions are calculated correctly
+**Images not processing**
+- Check OpenAI API key is valid
+- Verify image format (JPEG, PNG supported)
+- Check file size (<20MB)
 
-2. **Batch upload not processing**
-   - Check backend logs for errors
-   - Ensure all images are valid formats
-   - Verify API rate limits
+**Map not displaying**
+- Ensure Google Maps API key is configured
+- Check image contains GPS EXIF data
+- Verify API key has Maps JavaScript API enabled
 
-3. **EXIF data not displaying**
-   - Not all images contain EXIF metadata
-   - Some image formats don't support EXIF
+**Export not working**
+- Clear browser cache
+- Check console for errors
+- Verify all dependencies installed
 
-4. **High costs**
-   - Large images use more tokens
-   - Consider resizing images before upload
-   - Monitor token usage in real-time
-
-## Performance Optimization
-
-- Images are processed with "high" detail setting for accuracy
-- Batch processing handles up to 10 images concurrently
-- Frontend uses React.memo and useMemo for optimization
-- SVG rendering for efficient bounding box display
-
-## Security Considerations
-
-- API key stored in environment variables
-- CORS configured for specific origins
-- File type validation on upload
-- Size limits to prevent abuse
-
-## Contributing
+## 🤝 Contributing
 
 1. Fork the repository
-2. Create a feature branch
-3. Make your changes
-4. Add tests if applicable
-5. Submit a pull request
+2. Create feature branch (`git checkout -b feature/AmazingFeature`)
+3. Commit changes (`git commit -m 'Add AmazingFeature'`)
+4. Push to branch (`git push origin feature/AmazingFeature`)
+5. Open Pull Request
 
-## License
+## 📄 License
 
-[Specify your license here]
+This project is proprietary software developed for CBRE.
 
-## Acknowledgments
+## 👥 Authors
+
+- Development Team - Initial work
+- Claude Code - AI Assistant
+
+## 🙏 Acknowledgments
 
 - OpenAI for GPT-4o Vision API
+- Google Maps for location services
 - React and Vite communities
 - FastAPI framework
-- All open-source contributors
+- v0.app for UI inspiration
 
-## Support
+## 📞 Support
 
-For issues, questions, or suggestions, please open an issue on GitHub.
+For issues, questions, or feature requests:
+- GitHub Issues: https://github.com/jjayarajdev/objectIdentification/issues
+- Email: support@example.com
+
+## 🔗 Links
+
+- [GitHub Repository](https://github.com/jjayarajdev/objectIdentification)
+- [API Documentation](http://localhost:8000/docs)
+- [Project Wiki](https://github.com/jjayarajdev/objectIdentification/wiki)
+
+---
+
+**Built with ❤️ for CBRE Property Professionals**
