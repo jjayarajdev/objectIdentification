@@ -510,3 +510,475 @@ VITE_VERSION=1.0.0
 ---
 
 This frontend architecture provides a solid foundation for the Room Intelligence application with modern React patterns, responsive design, and excellent user experience.
+## 🎨 Modern Dark Theme UI (v2.0)
+
+### Overview
+The application now features a professional dark theme inspired by v0.app, optimized for desktop use with a focus on property analysis workflows.
+
+### Design System
+
+#### Color Palette
+```css
+--bg-primary: #0a0a0a     /* Deep black background */
+--bg-secondary: #1a1a1a   /* Card/panel background */
+--border: #374151          /* Borders and dividers */
+--accent: #14b8a6          /* Teal accent (primary actions) */
+--accent-hover: #0d9488    /* Teal hover state */
+--text-primary: #ffffff    /* Headers and important text */
+--text-secondary: #d1d5db  /* Body text */
+--text-tertiary: #9ca3af   /* Helper text */
+```
+
+#### Typography
+- **Headers**: Font weight 600-700, white color
+- **Body**: Font size 14-16px, gray-300 color
+- **Labels**: Font size 12-14px, uppercase for emphasis
+
+### Key Components
+
+#### ModernDarkDashboard.jsx
+**Purpose**: Main application container with dark theme
+
+**Features:**
+- Upload interface with drag & drop
+- Horizontal image carousel
+- Results display
+- Export functionality
+- Progress tracking
+
+**Structure:**
+```jsx
+<ModernDarkDashboard>
+  <Header>
+    <Logo />
+    <ActionButtons />
+  </Header>
+  
+  {/* Upload Screen */}
+  {noResults && (
+    <UploadZone>
+      <DragDropArea />
+      <FeatureCards />
+      <SelectedImagesGrid />
+      <ProcessButton />
+    </UploadZone>
+  )}
+  
+  {/* Results View */}
+  {hasResults && (
+    <>
+      <ImageCarousel />
+      <DarkSceneAnalysis />
+    </>
+  )}
+</ModernDarkDashboard>
+```
+
+#### DarkSceneAnalysis.jsx
+**Purpose**: Display analysis results with dark theme
+
+**Features:**
+- Collapsible sections with chevron indicators
+- Three-column layout (Image | Map | Overview)
+- Editable data table
+- Dark-themed Google Maps
+- EXIF data viewer
+- Detailed report modal
+- Word document export
+
+**Layout:**
+```jsx
+<DarkSceneAnalysis>
+  {/* Collapsible Header */}
+  <Header>
+    <SceneTypeBadge />
+    <FileName />
+    <ExpandButton />
+  </Header>
+  
+  {/* Top Section - 3 Columns */}
+  <ThreeColumnGrid>
+    <PropertyImage exifButton />
+    <GPSMap darkTheme />
+    <SceneOverview scrollable />
+  </ThreeColumnGrid>
+  
+  {/* Optional EXIF Data */}
+  {showExif && <ExifDataGrid />}
+  
+  {/* Data Table */}
+  <EditableTable>
+    <TableHeader />
+    <TableRows editable />
+    <AddRowButton />
+  </EditableTable>
+  
+  {/* Key Observations */}
+  <ObservationsList />
+  
+  {/* Actions */}
+  <ViewReportButton />
+</DarkSceneAnalysis>
+```
+
+### UI Patterns
+
+#### Cards
+```jsx
+// Standard card
+<div className="bg-[#1a1a1a] rounded-xl border border-gray-800 p-6">
+  {/* Content */}
+</div>
+
+// Highlighted card (selected state)
+<div className="bg-[#1a1a1a] rounded-xl border-2 border-teal-500 ring-2 ring-teal-500 shadow-lg shadow-teal-500/20">
+  {/* Content */}
+</div>
+```
+
+#### Buttons
+```jsx
+// Primary button (teal)
+<button className="px-4 py-2 bg-teal-500 text-white rounded-lg hover:bg-teal-600 transition-colors">
+  Action
+</button>
+
+// Secondary button (gray)
+<button className="px-4 py-2 bg-gray-800 text-gray-300 rounded-lg hover:bg-gray-700">
+  Action
+</button>
+
+// Ghost button (transparent)
+<button className="px-4 py-2 bg-teal-500/10 text-teal-400 rounded-lg hover:bg-teal-500/20 border border-teal-500/20">
+  Action
+</button>
+```
+
+#### Tables
+```jsx
+<table className="w-full">
+  <thead className="bg-gray-900 border-b border-gray-700">
+    <tr>
+      <th className="px-4 py-3 text-left text-xs font-semibold text-gray-300">
+        Header
+      </th>
+    </tr>
+  </thead>
+  <tbody className="bg-[#0a0a0a] divide-y divide-gray-800">
+    <tr className="hover:bg-gray-900/50 transition-colors">
+      <td className="px-4 py-3 text-sm text-gray-300">
+        Cell
+      </td>
+    </tr>
+  </tbody>
+</table>
+```
+
+### Layout System
+
+#### Three-Column Grid
+```jsx
+<div className="grid grid-cols-3 gap-4">
+  <div>{/* Image */}</div>
+  <div>{/* Map */}</div>
+  <div>{/* Overview */}</div>
+</div>
+```
+
+#### Horizontal Carousel
+```jsx
+<div className="flex gap-3 overflow-x-auto pb-2 scrollbar-thin scrollbar-thumb-gray-700">
+  {items.map(item => (
+    <div className="flex-shrink-0 w-64">
+      {/* Item */}
+    </div>
+  ))}
+</div>
+```
+
+### Interactive Elements
+
+#### Collapsible Section
+```jsx
+const [isExpanded, setIsExpanded] = useState(true);
+
+<button onClick={() => setIsExpanded(!isExpanded)}>
+  {isExpanded ? <ChevronUp /> : <ChevronDown />}
+</button>
+
+{isExpanded && (
+  <div>{/* Content */}</div>
+)}
+```
+
+#### Editable Table Row
+```jsx
+const [editingId, setEditingId] = useState(null);
+
+<tr>
+  <td>
+    {editingId === row.id ? (
+      <input value={editValue} onChange={handleChange} />
+    ) : (
+      <span>{row.value}</span>
+    )}
+  </td>
+  <td>
+    {editingId === row.id ? (
+      <>
+        <button onClick={handleSave}><Save /></button>
+        <button onClick={handleCancel}><X /></button>
+      </>
+    ) : (
+      <>
+        <button onClick={() => setEditingId(row.id)}><Edit2 /></button>
+        <button onClick={handleDelete}><Trash2 /></button>
+      </>
+    )}
+  </td>
+</tr>
+```
+
+### Custom Styling
+
+#### Scrollbars (index.css)
+```css
+.scrollbar-thin::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+
+.scrollbar-thin::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+.scrollbar-thin::-webkit-scrollbar-thumb {
+  background: #374151;
+  border-radius: 3px;
+}
+
+.scrollbar-thin::-webkit-scrollbar-thumb:hover {
+  background: #4b5563;
+}
+```
+
+#### Dark Maps Integration
+```javascript
+// Google Maps dark theme
+const mapStyles = [
+  { elementType: 'geometry', stylers: [{ color: '#1a1a1a' }] },
+  { elementType: 'labels.text.stroke', stylers: [{ color: '#0a0a0a' }] },
+  { elementType: 'labels.text.fill', stylers: [{ color: '#746855' }] },
+  // ... more styles
+];
+
+const map = new google.maps.Map(mapRef.current, {
+  center: gpsData,
+  zoom: 16,
+  styles: mapStyles
+});
+```
+
+### Export Functionality
+
+#### Word Document Export
+```javascript
+import exportService from '../utils/exportService';
+
+const handleExport = async () => {
+  await exportService.exportToWord([analysisData], {
+    name: 'Property_Analysis',
+    client: 'CBRE'
+  });
+};
+```
+
+**Export includes:**
+- Property images (embedded)
+- Scene overview
+- Detailed analysis
+- Data tables
+- Key observations
+- Professional formatting
+
+### Performance Optimization
+
+#### React Optimization
+```jsx
+// Memoize expensive components
+const MemoizedTable = React.memo(EditableTable);
+
+// Use useCallback for event handlers
+const handleEdit = useCallback((id) => {
+  setEditingId(id);
+}, []);
+
+// Use useMemo for computed values
+const sortedData = useMemo(() => {
+  return data.sort((a, b) => a.id - b.id);
+}, [data]);
+```
+
+#### Lazy Loading
+```jsx
+// Code splitting for heavy components
+const DarkSceneAnalysis = lazy(() => import('./DarkSceneAnalysis'));
+
+<Suspense fallback={<Loader />}>
+  <DarkSceneAnalysis />
+</Suspense>
+```
+
+### Responsive Behavior
+
+#### Breakpoints
+- `sm`: 640px
+- `md`: 768px
+- `lg`: 1024px
+- `xl`: 1280px
+- `2xl`: 1536px
+
+#### Responsive Grid
+```jsx
+// Adapts from 3 columns to 1 column
+<div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+  {/* Items */}
+</div>
+```
+
+### Accessibility
+
+#### Keyboard Navigation
+- Tab: Navigate between elements
+- Enter/Space: Activate buttons
+- Escape: Close modals
+- Arrow keys: Navigate carousel
+
+#### ARIA Labels
+```jsx
+<button 
+  aria-label="Edit item"
+  aria-pressed={isEditing}
+  role="button"
+>
+  <Edit2 className="w-4 h-4" />
+</button>
+```
+
+### State Management
+
+#### Component State
+```jsx
+const [files, setFiles] = useState([]);
+const [analysisResults, setAnalysisResults] = useState([]);
+const [selectedIndex, setSelectedIndex] = useState(null);
+const [isProcessing, setIsProcessing] = useState(false);
+```
+
+#### Derived State
+```jsx
+const hasResults = analysisResults.length > 0;
+const currentResult = selectedIndex !== null ? analysisResults[selectedIndex] : null;
+const successfulResults = analysisResults.filter(r => r.status === 'success');
+```
+
+### Error Handling
+
+#### Try-Catch Pattern
+```jsx
+const processImages = async () => {
+  try {
+    setIsProcessing(true);
+    const response = await api.analyzeImage(formData);
+    setAnalysisResults(response.data);
+  } catch (error) {
+    console.error('Processing failed:', error);
+    alert(`Error: ${error.message}`);
+  } finally {
+    setIsProcessing(false);
+  }
+};
+```
+
+### Testing Considerations
+
+#### Component Tests
+```jsx
+// Example test structure
+describe('ModernDarkDashboard', () => {
+  it('renders upload screen when no results', () => {
+    render(<ModernDarkDashboard />);
+    expect(screen.getByText(/Drop images here/i)).toBeInTheDocument();
+  });
+  
+  it('processes images on button click', async () => {
+    // Test implementation
+  });
+});
+```
+
+### Build Configuration
+
+#### Vite Config
+```javascript
+export default defineConfig({
+  plugins: [react()],
+  server: {
+    port: 5173,
+    proxy: {
+      '/api': 'http://localhost:8000'
+    }
+  },
+  build: {
+    outDir: 'dist',
+    sourcemap: true,
+    rollupOptions: {
+      output: {
+        manualChunks: {
+          vendor: ['react', 'react-dom'],
+          utils: ['axios', 'lucide-react']
+        }
+      }
+    }
+  }
+});
+```
+
+### Development Workflow
+
+1. **Start dev server**: `npm run dev`
+2. **Make changes**: Files hot-reload automatically
+3. **Test changes**: Check in browser at http://localhost:5173
+4. **Build**: `npm run build`
+5. **Preview**: `npm run preview`
+
+### Deployment
+
+#### Production Build
+```bash
+npm run build
+# Output in dist/
+```
+
+#### Environment Variables
+```env
+VITE_API_URL=https://api.example.com
+VITE_MAPS_KEY=your_maps_key
+```
+
+### Future Enhancements
+
+- [ ] Light/dark theme toggle
+- [ ] Custom theme colors
+- [ ] Mobile-optimized layout
+- [ ] Offline mode
+- [ ] Progressive Web App (PWA)
+- [ ] Advanced animations
+- [ ] Touch gesture support
+
+---
+
+**For more details, see:**
+- [Dark Theme UI Spec](../frontend/DARK_THEME_UI.md)
+- [Component Examples](../frontend/src/components/)
+- [Tailwind Documentation](https://tailwindcss.com/docs)
